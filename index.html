@@ -127,7 +127,12 @@ tbody tr:hover{background:var(--soft)}
 .csvtable table{font-size:13px}
 .csvtable th,.csvtable td{padding:8px 10px;white-space:nowrap}
 .maprow{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center;margin-bottom:8px}
-.maprow .col{font-size:13px;font-weight:600;background:var(--line-2);padding:8px 10px;border-radius:8px}
+.maprow .col{font-size:13px;font-weight:600;background:var(--line-2);padding:7px 10px;border-radius:8px;min-width:0}
+.maprow.off{opacity:.5}
+.maprow select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.extragrid{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13.5px}
+.extra-k{color:var(--muted);font-weight:600}
+.extra-v{color:var(--text);word-break:break-word}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink-2);color:#fff;padding:12px 18px;border-radius:11px;font-weight:600;font-size:14px;box-shadow:0 12px 30px rgba(0,0,0,.3);z-index:80;animation:pop .15s ease}
 
 @media(max-width:860px){
@@ -515,12 +520,20 @@ function editBewerber(id){
       '<div class="frow"><label>Status</label><select id="b-status">'+statusOpts+'</select></div></div>'+
       '<div class="frow"><label>Kunde (Zuordnung)</label><select id="b-cust" onchange="bStelleSync()">'+custOpts+'</select></div>'+
       '<div class="frow"><label>Stelle</label><select id="b-stelle"></select></div>'+
-      '<div class="frow"><label>Notizen</label><textarea id="b-notiz">'+esc(b.notizen||'')+'</textarea></div>',
+      '<div class="frow"><label>Notizen</label><textarea id="b-notiz">'+esc(b.notizen||'')+'</textarea></div>'+
+      extraBlock(b.extra),
     footer:(id?'<button class="btn danger sm" onclick="deleteBewerber(\''+id+'\')">Loeschen</button>':'')+
       '<div class="spacer"></div><button class="btn ghost" onclick="closeModal()">Abbrechen</button>'+
       '<button class="btn" onclick="saveBewerber('+(id?"'"+id+"'":'null')+')">Speichern</button>'
   });
   bStelleSync(b.stellenanzeige_id);
+}
+function extraBlock(extra){
+  const keys=extra&&typeof extra==='object'?Object.keys(extra):[];
+  if(!keys.length)return '';
+  return '<div class="divider"></div><div class="sec-title">Zusatzinfos (aus Import)</div>'+
+    '<div class="extragrid">'+keys.map(k=>
+      '<div class="extra-k">'+esc(k)+'</div><div class="extra-v">'+esc(extra[k])+'</div>').join('')+'</div>';
 }
 function bStelleSync(selId){
   const cid=$('#b-cust').value;
@@ -543,15 +556,25 @@ async function deleteBewerber(id){
   await reload('bewerber'); closeModal(); render(); toast('Bewerber geloescht');
 }
 
-/* ===================== CSV-IMPORT ===================== */
-let CSV={rows:[],headers:[],map:{}};
+/* ===================== CSV-IMPORT (flexibel: alle Spalten waehlbar) ===================== */
+// Zielfelder. 'extra' = als Zusatzinfo im JSONB-Feld speichern (Spaltenname = Schluessel).
+const CSV_TARGETS=[
+  {v:'skip',  l:'\u2014 nicht importieren'},
+  {v:'name',  l:'Name *'},
+  {v:'email', l:'E-Mail'},
+  {v:'telefon',l:'Telefon'},
+  {v:'quelle',l:'Quelle'},
+  {v:'status',l:'Status'},
+  {v:'extra', l:'Als Zusatzinfo speichern'}
+];
+let CSV={rows:[],headers:[],cols:[]}; // cols[i] = Zielfeld pro Spalte
 function openCsvImport(){
   openModal({
-    title:'Bewerber-CSV importieren', wide:true,
+    title:'Bewerber importieren', wide:true,
     body:
-      '<div class="frow"><label>CSV-Datei</label><input type="file" id="csv-file" accept=".csv,text/csv" onchange="csvFile(event)"></div>'+
-      '<div class="hint">Oder Inhalt direkt einfuegen:</div>'+
-      '<div class="frow"><textarea id="csv-text" placeholder="name,email,telefon,quelle" oninput="csvParse(this.value)"></textarea></div>'+
+      '<div class="frow"><label>CSV-/Tabellen-Datei</label><input type="file" id="csv-file" accept=".csv,text/csv,.tsv,text/tab-separated-values" onchange="csvFile(event)"></div>'+
+      '<div class="hint">Oder Inhalt direkt einfuegen (aus Google Sheets / Excel kopieren = Tab-getrennt, geht auch):</div>'+
+      '<div class="frow"><textarea id="csv-text" placeholder="Erste Zeile = Spaltennamen" oninput="csvParse(this.value)"></textarea></div>'+
       '<div id="csv-preview"></div>',
     footer:'<div class="spacer"></div><button class="btn ghost" onclick="closeModal()">Abbrechen</button>'+
       '<button class="btn" id="csv-go" onclick="csvImport()" disabled>Importieren</button>'
@@ -559,53 +582,101 @@ function openCsvImport(){
 }
 function csvFile(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{$('#csv-text').value=r.result;csvParse(r.result);};r.readAsText(f);}
 function csvParse(text){
-  text=(text||'').trim(); const prev=$('#csv-preview'); if(!text){if(prev)prev.innerHTML='';CSV={rows:[],headers:[],map:{}};$('#csv-go').disabled=true;return;}
-  const sep = text.split('\n')[0].includes(';')?';':',';
+  text=(text||'').replace(/\s+$/,''); const prev=$('#csv-preview');
+  if(!text){if(prev)prev.innerHTML='';CSV={rows:[],headers:[],cols:[]};$('#csv-go').disabled=true;return;}
+  const first=text.split('\n')[0];
+  const sep = first.includes('\t')?'\t':first.includes(';')?';':',';
   const lines=text.split(/\r?\n/).filter(l=>l.trim());
   const split=l=>{const out=[];let cur='',q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(q){if(ch==='"'){if(l[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=ch;}else{if(ch==='"')q=true;else if(ch===sep){out.push(cur);cur='';}else cur+=ch;}}out.push(cur);return out.map(x=>x.trim());};
   const headers=split(lines[0]);
   const rows=lines.slice(1).map(l=>split(l));
-  CSV={headers,rows,map:autoMap(headers)};
+  CSV={headers,rows,cols:autoMap(headers)};
   renderCsvPreview();
 }
+// Liefert pro Spalte das Default-Ziel.
 function autoMap(headers){
-  const m={name:'',email:'',telefon:'',quelle:''};
-  headers.forEach((h,i)=>{const l=h.toLowerCase();
-    if(!m.name&&/(name|vorname|nachname|bewerber)/.test(l))m.name=i;
-    if(!m.email&&/(mail|e-mail|email)/.test(l))m.email=i;
-    if(!m.telefon&&/(tel|phone|handy|mobil|nummer)/.test(l))m.telefon=i;
-    if(!m.quelle&&/(quelle|source|kanal)/.test(l))m.quelle=i;
+  let nameUsed=false,mailUsed=false,telUsed=false,quUsed=false,stUsed=false;
+  return headers.map(h=>{
+    const l=h.toLowerCase();
+    if(!nameUsed&&/(full_?name|^name$|vor.?name|nach.?name|bewerber)/.test(l)){nameUsed=true;return 'name';}
+    if(!mailUsed&&/(e-?mail|email)/.test(l)){mailUsed=true;return 'email';}
+    if(!telUsed&&/(phone|telefon|handy|mobil|rufnummer|number)/.test(l)){telUsed=true;return 'telefon';}
+    if(!quUsed&&/(platform|quelle|source|kanal)/.test(l)){quUsed=true;return 'quelle';}
+    if(!stUsed&&/(lead_?status|^status$)/.test(l)){stUsed=true;return 'status';}
+    // technische Meta-Felder standardmaessig nicht importieren
+    if(/(^id$|_id$|created_time|is_organic|ad_name|adset|campaign_id|form_id)/.test(l)) return 'skip';
+    return 'extra';
   });
-  return m;
+}
+function csvSet(i,v){
+  // Name/E-Mail/Telefon/Quelle/Status sind 1x vergeben -> bei Doppelung andere zuruecksetzen
+  if(['name','email','telefon','quelle','status'].includes(v)){
+    CSV.cols=CSV.cols.map((c,idx)=> (idx!==i && c===v)? 'extra' : c);
+  }
+  CSV.cols[i]=v; renderCsvPreview();
 }
 function renderCsvPreview(){
-  const fields=[['name','Name *'],['email','E-Mail'],['telefon','Telefon'],['quelle','Quelle']];
-  const opt=sel=>'<option value="">\u2014</option>'+CSV.headers.map((h,i)=>'<option value="'+i+'"'+(String(sel)===String(i)?' selected':'')+'>'+esc(h)+'</option>').join('');
   const custOpts='<option value="">\u2014 spaeter zuordnen</option>'+state.customers.map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join('');
+  const nImp=CSV.cols.filter(c=>c!=='skip').length;
+  const hasName=CSV.cols.includes('name');
+  const rowsHtml=CSV.headers.map((h,i)=>{
+    const sample=(CSV.rows.find(r=>(r[i]||'').trim())||[])[i]||'';
+    const sel=CSV.cols[i];
+    const opts=CSV_TARGETS.map(t=>'<option value="'+t.v+'"'+(t.v===sel?' selected':'')+'>'+t.l+'</option>').join('');
+    return '<div class="maprow'+(sel==='skip'?' off':'')+'">'+
+      '<div class="col"><b>'+esc(h)+'</b><div class="muted" style="font-size:11.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(sample)+'</div></div>'+
+      '<select onchange="csvSet('+i+',this.value)">'+opts+'</select></div>';
+  }).join('');
   $('#csv-preview').innerHTML=
-    '<div class="divider"></div><div class="sec-title">Spalten zuordnen</div>'+
-    fields.map(f=>'<div class="maprow"><div class="col">'+f[1]+'</div><select onchange="CSV.map.'+f[0]+'=this.value">'+opt(CSV.map[f[0]])+'</select></div>').join('')+
-    '<div class="frow" style="margin-top:6px"><label>Alle diesem Kunden zuordnen (optional)</label><select id="csv-cust">'+custOpts+'</select></div>'+
-    '<div class="sec-title" style="margin-top:6px">Vorschau ('+CSV.rows.length+' Zeilen)</div>'+
-    '<div class="csvtable"><table><thead><tr>'+CSV.headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+
-      CSV.rows.slice(0,5).map(r=>'<tr>'+r.map(c=>'<td>'+esc(c)+'</td>').join('')+'</tr>').join('')+
-    '</tbody></table></div>';
-  $('#csv-go').disabled = CSV.map.name===''||CSV.map.name==null;
+    '<div class="divider"></div>'+
+    '<div class="sec-title">Spalten zuordnen <span class="muted" style="text-transform:none;font-weight:500">('+nImp+' von '+CSV.headers.length+' aktiv \u00B7 '+CSV.rows.length+' Zeilen)</span></div>'+
+    '<div class="hint" style="margin-bottom:10px">Pro Spalte waehlen: Standardfeld, "Zusatzinfo" (bleibt am Bewerber gespeichert) oder "nicht importieren".</div>'+
+    rowsHtml+
+    '<div class="frow" style="margin-top:14px"><label>Alle diesem Kunden zuordnen (optional)</label><select id="csv-cust">'+custOpts+'</select></div>'+
+    (hasName?'':'<div class="hint" style="color:var(--danger)">Mindestens eine Spalte muss "Name" sein.</div>');
+  $('#csv-go').disabled = !hasName;
+}
+function normQuelle(v){
+  const l=(v||'').toLowerCase();
+  if(/ig|insta|fb|face|meta/.test(l))return 'meta';
+  if(/indeed/.test(l))return 'indeed';
+  if(/web/.test(l))return 'website';
+  if(QUELLE.includes(l))return l;
+  return 'csv';
+}
+function normStatus(v){
+  const l=(v||'').toLowerCase();
+  const hit=STATUS.find(s=>s.id===l||s.label.toLowerCase()===l);
+  return hit?hit.id:'neu';
 }
 async function csvImport(){
-  if(CSV.map.name===''||CSV.map.name==null){toast('Spalte "Name" zuordnen');return;}
+  if(!CSV.cols.includes('name')){toast('Spalte "Name" zuordnen');return;}
   const cid=$('#csv-cust')?.value||null;
-  const get=(r,k)=> (CSV.map[k]!==''&&CSV.map[k]!=null)? (r[CSV.map[k]]||'').trim() : '';
-  const payload=CSV.rows.map(r=>({
-    name:get(r,'name'), email:get(r,'email'), telefon:get(r,'telefon'),
-    quelle: get(r,'quelle')&&QUELLE.includes(get(r,'quelle').toLowerCase())? get(r,'quelle').toLowerCase() : 'csv',
-    status:'neu', customer_id:cid||null
-  })).filter(p=>p.name);
-  if(!payload.length){toast('Keine gueltigen Zeilen');return;}
+  const idx=t=>CSV.cols.indexOf(t);
+  const payload=CSV.rows.map(r=>{
+    const cell=t=>{const k=idx(t);return k>=0?(r[k]||'').trim():'';};
+    const extra={};
+    CSV.cols.forEach((c,i)=>{ if(c==='extra'){ const val=(r[i]||'').trim(); if(val) extra[CSV.headers[i]]=val; } });
+    return {
+      name:cell('name'),
+      email:cell('email')||null,
+      telefon:cell('telefon')||null,
+      quelle: idx('quelle')>=0? normQuelle(cell('quelle')) : 'csv',
+      status: idx('status')>=0? normStatus(cell('status')) : 'neu',
+      customer_id:cid||null,
+      extra
+    };
+  }).filter(p=>p.name);
+  if(!payload.length){toast('Keine gueltigen Zeilen (Name leer?)');return;}
   $('#csv-go').disabled=true; $('#csv-go').textContent='Importiere...';
-  const res=await sb.from('bewerber').insert(payload);
-  if(res.error){toast('Fehler: '+res.error.message);$('#csv-go').disabled=false;$('#csv-go').textContent='Importieren';return;}
-  await reload('bewerber'); closeModal(); render(); toast(payload.length+' Bewerber importiert');
+  // in Batches zu 500 (grosse Sheets)
+  let done=0;
+  for(let i=0;i<payload.length;i+=500){
+    const res=await sb.from('bewerber').insert(payload.slice(i,i+500));
+    if(res.error){toast('Fehler: '+res.error.message);$('#csv-go').disabled=false;$('#csv-go').textContent='Importieren';return;}
+    done+=Math.min(500,payload.length-i);
+  }
+  await reload('bewerber'); closeModal(); render(); toast(done+' Bewerber importiert');
 }
 
 /* ===================== MATCHING ===================== */
