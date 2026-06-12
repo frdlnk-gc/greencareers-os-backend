@@ -147,6 +147,67 @@ tbody tr:hover{background:var(--soft)}
 }
 .menubtn{display:none;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:#fff;place-items:center;font-size:18px}
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:39}
+
+/* ---------- DETAIL / COCKPIT ---------- */
+.backlink{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:12px;cursor:pointer}
+.backlink:hover{color:var(--green-2)}
+.dhead{display:flex;align-items:flex-start;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+.dhead .av{width:54px;height:54px;border-radius:14px;background:var(--green);color:#fff;display:grid;place-items:center;font-weight:800;font-size:22px;flex-shrink:0}
+.dhead h2{font-size:22px;font-weight:800;letter-spacing:-.3px}
+.dhead .meta{color:var(--muted);font-size:13px;margin-top:3px}
+.badges{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.cardh{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.cardh b{font-size:15px}
+.cardh .btn{margin-left:auto}
+.cardp{padding:16px 18px}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:9px 14px;font-size:14px}
+.kv .k{color:var(--muted);font-weight:600}
+.kv .v{color:var(--text);word-break:break-word}
+.modgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modrow{display:flex;align-items:center;gap:11px;padding:11px 13px;border:1px solid var(--line);border-radius:11px;background:#fff}
+.modrow .mt{flex:1;min-width:0}
+.modrow .mt b{font-size:14px;display:block}
+.modrow .mt small{color:var(--muted);font-size:11.5px}
+.switch{position:relative;width:40px;height:23px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:#cfd8d0;border-radius:999px;transition:.18s;cursor:pointer}
+.slider:before{content:'';position:absolute;height:17px;width:17px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.18s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.switch input:checked+.slider{background:var(--green)}
+.switch input:checked+.slider:before{transform:translateX(17px)}
+.listrow{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line-2)}
+.listrow:last-child{border-bottom:none}
+.listrow .lt{flex:1;min-width:0}
+.listrow .lt b{font-size:14px}
+.listrow .lt small{display:block;color:var(--muted);font-size:12px}
+.tk-prio{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.tk-prio.niedrig{background:#9CA3AF}.tk-prio.mittel{background:#16A34A}.tk-prio.hoch{background:#EA580C}.tk-prio.dringend{background:#DC2626}
+.stars{display:inline-flex;gap:2px}
+.star{cursor:pointer;font-size:18px;color:#D7DED8;line-height:1}
+.star.on{color:#F5B301}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:none;background:#fff;padding:8px 14px;font-weight:600;font-size:13.5px;color:var(--muted)}
+.seg button.on{background:var(--green);color:#fff}
+.tagpill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--soft);color:var(--green-2)}
+.tagpill .rm{cursor:pointer;opacity:.6}.tagpill .rm:hover{opacity:1}
+/* Kanban */
+.board{display:grid;grid-template-columns:repeat(7,minmax(190px,1fr));gap:12px;overflow-x:auto;padding-bottom:8px}
+.kcol{background:var(--line-2);border-radius:13px;min-height:120px;display:flex;flex-direction:column}
+.kcolh{padding:11px 13px;font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);display:flex;align-items:center;gap:7px;position:sticky;top:0}
+.kcolh .n{margin-left:auto;background:#fff;border-radius:999px;padding:0 7px;font-size:11px}
+.kcol.drag{outline:2px dashed var(--green);outline-offset:-3px}
+.kbody{padding:0 9px 9px;display:flex;flex-direction:column;gap:8px;flex:1}
+.kcard{background:#fff;border:1px solid var(--line);border-radius:11px;padding:10px 12px;cursor:grab;box-shadow:0 1px 2px rgba(16,38,25,.05)}
+.kcard:active{cursor:grabbing}
+.kcard b{font-size:13.5px}
+.kcard .sub{color:var(--muted);font-size:11.5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kcard .kf{display:flex;align-items:center;gap:6px;margin-top:7px}
+.miniquelle{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:999px;background:var(--line-2);color:var(--muted)}
+.csvbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.pwbox{background:var(--soft);border:1px solid #CDEBD8;border-radius:11px;padding:13px 15px;font-size:13.5px}
+.pwbox code{background:#fff;border:1px solid var(--line);padding:3px 8px;border-radius:7px;font-weight:700;font-size:14px;letter-spacing:.5px}
+@media(max-width:860px){.grid2,.modgrid{grid-template-columns:1fr}.grid3{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -206,8 +267,8 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 /* ===================== STATE ===================== */
 const state = {
   profile:null, view:'dashboard',
-  customers:[], stellen:[], bewerber:[], branchen:[],
-  search:'', filterCustomer:'all'
+  customers:[], stellen:[], bewerber:[], branchen:[], tickets:[], activity:[], users:[],
+  search:'', filterCustomer:'all', selCustomer:null, bewView:'tabelle'
 };
 const STATUS = [
   {id:'neu',label:'Neu',c:'gray'},
@@ -220,6 +281,33 @@ const STATUS = [
 ];
 const QUELLE = ['indeed','meta','manuell','csv','website'];
 const THEME_TAG = {galabau:'green',tiefbau:'orange',landwirtschaft:'gold'};
+const MODULES = [
+  {id:'heute',  label:'Heute',    desc:'Tages-Cockpit, Wetter, Stempeluhr'},
+  {id:'team',   label:'Team',     desc:'Personalakte & Abwesenheiten'},
+  {id:'planung',label:'Planung',  desc:'Plantafel & Einsatzplanung'},
+  {id:'kunden', label:'Kunden',   desc:'Auftraege & Angebote'},
+  {id:'finanzen',label:'Finanzen',desc:'Umsaetze & Rechnungen'},
+  {id:'markt',  label:'Markt',    desc:'Recruiting-Marktplatz'}
+];
+const PLANS = [
+  {v:'free',l:'Free',c:'gray'},{v:'basis',l:'Basis',c:'green'},
+  {v:'pro',l:'Pro',c:'blue'},{v:'enterprise',l:'Enterprise',c:'gold'}
+];
+const ABO_STATUS = [
+  {v:'testphase',l:'Testphase',c:'gold'},{v:'aktiv',l:'Aktiv',c:'green'},
+  {v:'pausiert',l:'Pausiert',c:'gray'},{v:'gekuendigt',l:'Gekuendigt',c:'red'}
+];
+const ONBOARDING = [
+  {v:'neu',l:'Neu',c:'gray'},{v:'onboarding',l:'Onboarding',c:'gold'},
+  {v:'live',l:'Live',c:'green'},{v:'inaktiv',l:'Inaktiv',c:'red'}
+];
+const TICKET_STATUS = [
+  {v:'offen',l:'Offen',c:'gold'},{v:'in_arbeit',l:'In Arbeit',c:'blue'},
+  {v:'wartet',l:'Wartet',c:'gray'},{v:'geloest',l:'Geloest',c:'green'}
+];
+const TICKET_PRIO = ['niedrig','mittel','hoch','dringend'];
+const defaultModules = ()=>({heute:true,team:true,planung:false,kunden:false,finanzen:false,markt:false});
+function lookup(arr,v){return arr.find(x=>x.v===v)||{l:v,c:'gray'};}
 
 /* ===================== HELPERS ===================== */
 const $ = s => document.querySelector(s);
@@ -229,6 +317,22 @@ const stelleById = id => state.stellen.find(s=>s.id===id);
 const statusOf = id => STATUS.find(s=>s.id===id) || {label:id,c:'gray'};
 function toast(msg){const r=$('#toastRoot');r.innerHTML='<div class="toast">'+esc(msg)+'</div>';setTimeout(()=>r.innerHTML='',2200);}
 function fmtDate(d){if(!d)return '';const x=new Date(d);return x.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});}
+function fmtEUR(n){return (Number(n)||0).toLocaleString('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0});}
+function initials(s){return (s||'?').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('')||'?';}
+function genPw(){const a='ABCDEFGHJKLMNPQRSTUVWXYZ',b='abcdefghijkmnpqrstuvwxyz',d='23456789',s='!@#$%';const pick=x=>x[Math.floor(Math.random()*x.length)];let p=pick(a)+pick(b)+pick(b)+pick(b)+pick(d)+pick(d)+pick(s)+pick(b)+pick(d);return p;}
+/* Edge Function fuer User-Provisioning (service_role bleibt server-seitig) */
+async function callAdmin(action,payload={}){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session) throw new Error('Keine Session');
+  const res=await fetch(SUPABASE_URL+'/functions/v1/admin-users',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':SUPABASE_ANON},
+    body:JSON.stringify(Object.assign({action},payload))
+  });
+  let j={}; try{j=await res.json();}catch(e){}
+  if(!res.ok||j.error) throw new Error(j.error||('HTTP '+res.status));
+  return j;
+}
 
 /* ===================== AUTH ===================== */
 async function init(){
@@ -268,19 +372,26 @@ async function doLogout(){ await sb.auth.signOut(); state.profile=null; showLogi
 
 /* ===================== DATA ===================== */
 async function loadAll(){
-  const [c,s,b,br] = await Promise.all([
+  const [c,s,b,br,tk,ac,pr] = await Promise.all([
     sb.from('customers').select('*').order('name'),
     sb.from('stellenanzeigen').select('*').order('created_at',{ascending:false}),
     sb.from('bewerber').select('*').order('created_at',{ascending:false}),
-    sb.from('branchen').select('*').order('sort')
+    sb.from('branchen').select('*').order('sort'),
+    sb.from('support_tickets').select('*').order('created_at',{ascending:false}),
+    sb.from('activity_log').select('*').order('created_at',{ascending:false}),
+    sb.from('profiles').select('*').order('created_at',{ascending:false})
   ]);
   state.customers = c.data||[]; state.stellen = s.data||[];
   state.bewerber = b.data||[]; state.branchen = br.data||[];
+  state.tickets = tk.data||[]; state.activity = ac.data||[]; state.users = pr.data||[];
 }
 async function reload(table){
   if(table==='customers'){const {data}=await sb.from('customers').select('*').order('name');state.customers=data||[];}
   if(table==='stellen'){const {data}=await sb.from('stellenanzeigen').select('*').order('created_at',{ascending:false});state.stellen=data||[];}
   if(table==='bewerber'){const {data}=await sb.from('bewerber').select('*').order('created_at',{ascending:false});state.bewerber=data||[];}
+  if(table==='tickets'){const {data}=await sb.from('support_tickets').select('*').order('created_at',{ascending:false});state.tickets=data||[];}
+  if(table==='activity'){const {data}=await sb.from('activity_log').select('*').order('created_at',{ascending:false});state.activity=data||[];}
+  if(table==='users'){const {data}=await sb.from('profiles').select('*').order('created_at',{ascending:false});state.users=data||[];}
 }
 
 /* ===================== NAV / ROUTER ===================== */
@@ -289,15 +400,20 @@ const VIEWS = [
   {id:'kunden',label:'Kunden',ic:'\u25A4'},
   {id:'stellen',label:'Stellenanzeigen',ic:'\u25A6'},
   {id:'bewerber',label:'Bewerber',ic:'\u263A'},
-  {id:'matching',label:'Bewerbungen',ic:'\u21C4'}
+  {id:'matching',label:'Bewerbungen',ic:'\u21C4'},
+  {id:'support',label:'Support',ic:'\u2691'},
+  {id:'logins',label:'Logins & Team',ic:'\u26BF'}
 ];
 function renderNav(){
+  const activeView = state.view==='kunde'?'kunden':state.view;
   $('#nav').innerHTML = VIEWS.map(v=>{
     let ct='';
     if(v.id==='kunden')ct=state.customers.length;
     if(v.id==='stellen')ct=state.stellen.length;
     if(v.id==='bewerber')ct=state.bewerber.length;
-    return '<div class="navitem'+(state.view===v.id?' active':'')+'" onclick="setView(\''+v.id+'\')">'+
+    if(v.id==='support')ct=state.tickets.filter(t=>t.status!=='geloest').length;
+    if(v.id==='logins')ct=state.users.length;
+    return '<div class="navitem'+(activeView===v.id?' active':'')+'" onclick="setView(\''+v.id+'\')">'+
       '<span class="ic">'+v.ic+'</span>'+v.label+(ct!==''?'<span class="ct">'+ct+'</span>':'')+'</div>';
   }).join('');
 }
@@ -306,35 +422,49 @@ function toggleNav(open){ $('#sidebar').classList.toggle('open',open); $('#scrim
 
 function render(){
   renderNav();
-  const titles={dashboard:'Dashboard',kunden:'Kunden',stellen:'Stellenanzeigen',bewerber:'Bewerber',matching:'Bewerbungen durchfuehren'};
+  const titles={dashboard:'Dashboard',kunden:'Kunden',kunde:'Kunde',stellen:'Stellenanzeigen',bewerber:'Bewerber',matching:'Bewerbungen durchfuehren',support:'Support',logins:'Logins & Team'};
   const subs={
     dashboard:'Recruiting-Operations auf einen Blick',
     kunden:'Betriebe anlegen, bearbeiten, verwalten',
+    kunde:'Komplettes Kunden-Cockpit',
     stellen:'Offene Stellen aller Kunden',
     bewerber:'Eingehende Bewerber einpflegen & zuordnen',
-    matching:'Bewerber den Stellen & Kunden zuordnen'
+    matching:'Bewerber den Stellen & Kunden zuordnen',
+    support:'Anfragen & Tickets aller Kunden',
+    logins:'Zugaenge fuer Kunden & GreenCareers-Team'
   };
-  $('#pgTitle').textContent=titles[state.view];
-  $('#pgSub').textContent=subs[state.view];
+  $('#pgTitle').textContent=titles[state.view]||'';
+  $('#pgSub').textContent=subs[state.view]||'';
   $('#pgActions').innerHTML='';
   if(state.view==='dashboard') viewDashboard();
   if(state.view==='kunden') viewKunden();
+  if(state.view==='kunde') viewKundeDetail();
   if(state.view==='stellen') viewStellen();
   if(state.view==='bewerber') viewBewerber();
   if(state.view==='matching') viewMatching();
+  if(state.view==='support') viewSupport();
+  if(state.view==='logins') viewLogins();
 }
 
 /* ===================== DASHBOARD ===================== */
 function viewDashboard(){
   const offen = state.stellen.filter(s=>s.status==='aktiv').length;
-  const qual = state.bewerber.filter(b=>b.status==='qualifiziert'||b.status==='anrufen').length;
   const unassigned = state.bewerber.filter(b=>!b.customer_id).length;
+  const mrr = state.customers.filter(c=>c.abo_status==='aktiv').reduce((a,c)=>a+(Number(c.mrr)||0),0);
+  const openT = state.tickets.filter(t=>t.status!=='geloest').length;
+  const onbCounts = ONBOARDING.map(o=>({...o,n:state.customers.filter(c=>(c.onboarding_status||'neu')===o.v).length}));
   $('#content').innerHTML =
     '<div class="stats">'+
       stat(state.customers.length,'Kunden')+
-      stat(offen,'Offene Stellen')+
+      stat(fmtEUR(mrr),'MRR (aktive Abos)')+
       stat(state.bewerber.length,'Bewerber gesamt')+
-      stat(qual,'Qualifiziert / Anrufen')+
+      stat(openT,'Offene Tickets')+
+    '</div>'+
+    '<div class="card" style="padding:14px 18px;margin-bottom:22px;display:flex;gap:18px;flex-wrap:wrap;align-items:center">'+
+      '<b style="font-size:13px">Kunden-Status</b>'+
+      onbCounts.map(o=>'<span class="tag-s '+o.c+'">'+esc(o.l)+': '+o.n+'</span>').join('')+
+      '<div style="flex:1"></div>'+
+      '<span class="muted" style="font-size:13px">'+offen+' offene Stellen</span>'+
     '</div>'+
     '<div class="card tablecard" style="margin-bottom:22px">'+
       '<div style="padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center">'+
@@ -360,22 +490,212 @@ function viewKunden(){
   $('#content').innerHTML =
     toolbar('Kunde oder Ort suchen...')+
     '<div class="card tablecard">'+
-    (rows.length? '<table><thead><tr><th>Betrieb</th><th>Branchen</th><th class="hide-sm">Ort</th><th class="right">Stellen</th><th class="right">Bewerber</th></tr></thead><tbody>'+
+    (rows.length? '<table><thead><tr><th>Betrieb</th><th class="hide-sm">Branchen</th><th>Abo</th><th>Status</th><th class="right">Bewerber</th></tr></thead><tbody>'+
       rows.map(c=>{
-        const ns=state.stellen.filter(s=>s.customer_id===c.id).length;
         const nb=state.bewerber.filter(b=>b.customer_id===c.id).length;
-        return '<tr onclick="editCustomer(\''+c.id+'\')">'+
-          '<td><b>'+esc(c.name)+'</b></td>'+
-          '<td><div class="chips">'+(c.branchen||[]).slice(0,3).map(b=>'<span class="tag-s '+(THEME_TAG[c.theme]||'gray')+'">'+esc(b)+'</span>').join('')+'</div></td>'+
-          '<td class="hide-sm muted">'+esc(c.ort||'')+'</td>'+
-          '<td class="right">'+ns+'</td><td class="right">'+nb+'</td></tr>';
+        const pl=lookup(PLANS,c.plan||'free'), ab=lookup(ABO_STATUS,c.abo_status||'aktiv'), on=lookup(ONBOARDING,c.onboarding_status||'neu');
+        return '<tr onclick="openCustomer(\''+c.id+'\')">'+
+          '<td><b>'+esc(c.name)+'</b><div class="muted" style="font-size:12px">'+esc(c.ort||'')+'</div></td>'+
+          '<td class="hide-sm"><div class="chips">'+(c.branchen||[]).slice(0,2).map(b=>'<span class="tag-s '+(THEME_TAG[c.theme]||'gray')+'">'+esc(b)+'</span>').join('')+'</div></td>'+
+          '<td><span class="tag-s '+pl.c+'">'+esc(pl.l)+'</span> <span class="tag-s '+ab.c+'">'+esc(ab.l)+'</span></td>'+
+          '<td><span class="tag-s '+on.c+'">'+esc(on.l)+'</span></td>'+
+          '<td class="right">'+nb+'</td></tr>';
       }).join('')+'</tbody></table>'
       : empty('\u25A4','Noch keine Kunden','Lege den ersten Betrieb an.'))+
     '</div>';
 }
+function openCustomer(id){ state.selCustomer=id; state.view='kunde'; state.search=''; render(); window.scrollTo(0,0); }
+
+/* ===================== KUNDEN-COCKPIT ===================== */
+function viewKundeDetail(){
+  const c=cust(state.selCustomer);
+  if(!c){ state.view='kunden'; return render(); }
+  $('#pgTitle').textContent=c.name;
+  $('#pgSub').textContent='Kunden-Cockpit';
+  $('#pgActions').innerHTML='<button class="btn ghost" onclick="loginAsCustomer(\''+c.id+'\')">Kunden-OS ansehen</button> <button class="btn" onclick="editCustomer(\''+c.id+'\')">Stammdaten bearbeiten</button>';
+  const pl=lookup(PLANS,c.plan||'free'), ab=lookup(ABO_STATUS,c.abo_status||'aktiv'), on=lookup(ONBOARDING,c.onboarding_status||'neu');
+  const mods=Object.assign(defaultModules(),c.modules||{});
+  const ns=state.stellen.filter(s=>s.customer_id===c.id);
+  const nb=state.bewerber.filter(b=>b.customer_id===c.id);
+  const logins=state.users.filter(u=>u.customer_id===c.id);
+  const tickets=state.tickets.filter(t=>t.customer_id===c.id);
+  const acts=state.activity.filter(a=>a.customer_id===c.id);
+
+  $('#content').innerHTML=
+    '<div class="backlink" onclick="setView(\'kunden\')">\u2190 Alle Kunden</div>'+
+    '<div class="dhead">'+
+      '<div class="av" style="background:'+(c.primary_color||'var(--green)')+'">'+esc(initials(c.name))+'</div>'+
+      '<div style="flex:1;min-width:0"><h2>'+esc(c.name)+'</h2>'+
+        '<div class="meta">'+esc([c.strasse,[c.plz,c.ort].filter(Boolean).join(' ')].filter(Boolean).join(' \u00B7 ')||'Keine Adresse')+'</div>'+
+        '<div class="badges">'+(c.branchen||[]).map(b=>'<span class="tag-s '+(THEME_TAG[c.theme]||'gray')+'">'+esc(b)+'</span>').join('')+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="grid2" style="margin-bottom:16px">'+
+      // STAMMDATEN
+      '<div class="card"><div class="cardh"><b>Stammdaten</b></div><div class="cardp">'+
+        '<div class="kv">'+
+          row('Ansprechpartner',c.ansprechpartner)+
+          row('Telefon',c.telefon)+
+          row('E-Mail',c.email)+
+          row('Website',c.website)+
+          row('Adresse',[c.strasse,[c.plz,c.ort].filter(Boolean).join(' ')].filter(Boolean).join(', '))+
+        '</div>'+
+        (c.notizen?'<div class="divider"></div><div class="muted" style="font-size:13px;white-space:pre-wrap">'+esc(c.notizen)+'</div>':'')+
+      '</div></div>'+
+      // VERTRAG
+      '<div class="card"><div class="cardh"><b>Vertrag & Abo</b></div><div class="cardp">'+
+        '<div class="frow2">'+
+          '<div class="frow"><label>Tarif</label><select onchange="saveCustomerField(\''+c.id+'\',\'plan\',this.value)">'+PLANS.map(p=>'<option value="'+p.v+'"'+(p.v===(c.plan||'free')?' selected':'')+'>'+p.l+'</option>').join('')+'</select></div>'+
+          '<div class="frow"><label>Abo-Status</label><select onchange="saveCustomerField(\''+c.id+'\',\'abo_status\',this.value)">'+ABO_STATUS.map(p=>'<option value="'+p.v+'"'+(p.v===(c.abo_status||'aktiv')?' selected':'')+'>'+p.l+'</option>').join('')+'</select></div>'+
+        '</div>'+
+        '<div class="frow2">'+
+          '<div class="frow"><label>MRR (EUR/Monat)</label><input type="number" value="'+(Number(c.mrr)||0)+'" onchange="saveCustomerField(\''+c.id+'\',\'mrr\',this.value)"></div>'+
+          '<div class="frow"><label>Onboarding</label><select onchange="saveCustomerField(\''+c.id+'\',\'onboarding_status\',this.value)">'+ONBOARDING.map(p=>'<option value="'+p.v+'"'+(p.v===(c.onboarding_status||'neu')?' selected':'')+'>'+p.l+'</option>').join('')+'</select></div>'+
+        '</div>'+
+        '<div class="frow"><label>Vertragsbeginn</label><input type="date" value="'+esc(c.vertrag_start||'')+'" onchange="saveCustomerField(\''+c.id+'\',\'vertrag_start\',this.value)"></div>'+
+      '</div></div>'+
+    '</div>'+
+    // MODULE
+    '<div class="card" style="margin-bottom:16px"><div class="cardh"><b>Modul-Freischaltung</b><span class="muted" style="font-size:12.5px;font-weight:500">&nbsp;\u2014 was der Kunde in seinem GreenCareers OS sieht</span></div><div class="cardp">'+
+      '<div class="modgrid">'+MODULES.map(m=>
+        '<div class="modrow"><div class="mt"><b>'+m.label+'</b><small>'+m.desc+'</small></div>'+
+        '<label class="switch"><input type="checkbox"'+(mods[m.id]?' checked':'')+' onchange="toggleModule(\''+c.id+'\',\''+m.id+'\',this.checked)"><span class="slider"></span></label></div>'
+      ).join('')+'</div>'+
+    '</div></div>'+
+    // LOGINS
+    '<div class="card" style="margin-bottom:16px"><div class="cardh"><b>Logins</b><span class="tag-s gray" style="margin-left:4px">'+logins.length+'</span><button class="btn sm" onclick="createLoginModal(\''+c.id+'\')">+ Login anlegen</button></div>'+
+      (logins.length? logins.map(u=>
+        '<div class="listrow"><div class="lt"><b>'+esc(u.name||u.email)+'</b><small>'+esc(u.email)+' \u00B7 '+(u.role==='gc_admin'?'GC-Admin':'Inhaber')+'</small></div>'+
+        '<button class="btn ghost sm" onclick="resetLogin(\''+u.id+'\')">Passwort</button>'+
+        '<button class="btn danger sm" onclick="deleteLogin(\''+u.id+'\')">Entfernen</button></div>'
+      ).join('') : '<div class="cardp muted" style="font-size:13.5px">Noch kein Zugang. Lege einen Inhaber-Login an, damit der Kunde sein OS nutzen kann.</div>')+
+    '</div>'+
+    '<div class="grid2" style="margin-bottom:16px">'+
+      // SUPPORT
+      '<div class="card"><div class="cardh"><b>Support-Tickets</b><button class="btn sm" onclick="addTicketModal(\''+c.id+'\')">+ Ticket</button></div>'+
+        (tickets.length? tickets.map(t=>{const ts=lookup(TICKET_STATUS,t.status);return
+          '<div class="listrow"><span class="tk-prio '+esc(t.prio)+'"></span><div class="lt"><b>'+esc(t.betreff)+'</b><small>'+fmtDate(t.created_at)+(t.beschreibung?' \u00B7 '+esc(t.beschreibung.slice(0,60)):'')+'</small></div>'+
+          '<select onchange="setTicketStatus(\''+t.id+'\',this.value)" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:12.5px">'+TICKET_STATUS.map(s=>'<option value="'+s.v+'"'+(s.v===t.status?' selected':'')+'>'+s.l+'</option>').join('')+'</select></div>';
+        }).join('') : '<div class="cardp muted" style="font-size:13.5px">Keine Tickets.</div>')+
+      '</div>'+
+      // AKTIVITAET
+      '<div class="card"><div class="cardh"><b>Aktivitaet & Notizen</b><button class="btn sm" onclick="addActivityModal(\''+c.id+'\')">+ Eintrag</button></div>'+
+        (acts.length? acts.slice(0,12).map(a=>
+          '<div class="listrow"><div class="lt"><b>'+esc(a.text)+'</b><small>'+fmtDate(a.created_at)+(a.actor?' \u00B7 '+esc(a.actor):'')+'</small></div></div>'
+        ).join('') : '<div class="cardp muted" style="font-size:13.5px">Noch keine Eintraege.</div>')+
+      '</div>'+
+    '</div>'+
+    // STELLEN & BEWERBER SUMMARY
+    '<div class="grid2">'+
+      '<div class="card"><div class="cardh"><b>Stellenanzeigen</b><span class="tag-s gray" style="margin-left:4px">'+ns.length+'</span><button class="btn sm" onclick="editStelle(null,\''+c.id+'\')">+ Stelle</button></div>'+
+        (ns.length? ns.map(s=>{const st=s.status==='aktiv'?'green':s.status==='pausiert'?'gold':'gray';return '<div class="listrow" style="cursor:pointer" onclick="editStelle(\''+s.id+'\')"><div class="lt"><b>'+esc(s.titel)+'</b><small>'+esc(s.ort||'')+' \u00B7 '+state.bewerber.filter(b=>b.stellenanzeige_id===s.id).length+' Bewerber</small></div><span class="tag-s '+st+'">'+esc(s.status)+'</span></div>';}).join('') : '<div class="cardp muted" style="font-size:13.5px">Keine Stellen.</div>')+
+      '</div>'+
+      '<div class="card"><div class="cardh"><b>Bewerber</b><span class="tag-s gray" style="margin-left:4px">'+nb.length+'</span></div>'+
+        (nb.length? nb.slice(0,10).map(b=>{const st=statusOf(b.status);return '<div class="listrow" style="cursor:pointer" onclick="editBewerber(\''+b.id+'\')"><div class="lt"><b>'+esc(b.name)+'</b><small>'+esc(b.email||b.telefon||'')+'</small></div><span class="tag-s '+st.c+'">'+esc(st.label)+'</span></div>';}).join('') : '<div class="cardp muted" style="font-size:13.5px">Keine Bewerber.</div>')+
+      '</div>'+
+    '</div>';
+}
+function row(k,v){ return '<div class="k">'+esc(k)+'</div><div class="v">'+(v?esc(v):'<span class="muted">\u2014</span>')+'</div>'; }
+
+async function saveCustomerField(id,field,val){
+  if(field==='mrr') val=Number(val)||0;
+  if(field==='vertrag_start' && !val) val=null;
+  const res=await sb.from('customers').update({[field]:val}).eq('id',id);
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  await reload('customers'); toast('Gespeichert');
+}
+async function toggleModule(id,mod,on){
+  const c=cust(id); const mods=Object.assign(defaultModules(),c.modules||{}); mods[mod]=on;
+  const res=await sb.from('customers').update({modules:mods}).eq('id',id);
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  await reload('customers'); toast((on?'Freigeschaltet: ':'Gesperrt: ')+mod);
+}
+function loginAsCustomer(id){ toast('Kunden-OS-Vorschau kommt mit der API-Welle'); }
+
+/* ---- Logins / Provisioning ---- */
+function createLoginModal(cid){
+  const c=cid?cust(cid):null; const pw=genPw();
+  const custOpts='<option value="">\u2014 kein Kunde (nur GC-Admin)</option>'+state.customers.map(x=>'<option value="'+x.id+'"'+(x.id===cid?' selected':'')+'>'+esc(x.name)+'</option>').join('');
+  openModal({
+    title:'Login anlegen'+(c?' \u2013 '+esc(c.name):''),
+    body:
+      '<div class="frow"><label>Name</label><input id="u-name" value="'+esc(c?c.ansprechpartner||'':'')+'" placeholder="Vor- und Nachname"></div>'+
+      '<div class="frow"><label>E-Mail (Login) *</label><input id="u-email" type="email" value="'+esc(c?c.email||'':'')+'"></div>'+
+      '<div class="frow2"><div class="frow"><label>Rolle</label><select id="u-role" onchange="$(\'#u-custwrap\').style.display=this.value===\'gc_admin\'?\'none\':\'block\'"><option value="owner">Inhaber (Kunde)</option><option value="gc_admin">GreenCareers-Admin</option></select></div>'+
+      '<div class="frow" id="u-custwrap"><label>Kunde</label><select id="u-cust">'+custOpts+'</select></div></div>'+
+      '<div class="frow"><label>Start-Passwort *</label><input id="u-pw" value="'+esc(pw)+'"></div>'+
+      '<div class="pwbox">Notiere das Passwort \u2013 der Kunde kann es nach dem ersten Login aendern. Vorschlag: <code>'+esc(pw)+'</code></div>',
+    footer:'<div class="spacer"></div><button class="btn ghost" onclick="closeModal()">Abbrechen</button><button class="btn" id="u-go" onclick="createLogin()">Anlegen</button>'
+  });
+}
+async function createLogin(){
+  const email=$('#u-email').value.trim(); const pw=$('#u-pw').value; const name=$('#u-name').value.trim(); const role=$('#u-role').value;
+  const cid=role==='gc_admin'?null:($('#u-cust').value||null);
+  if(!email||pw.length<8){toast('E-Mail + Passwort (min. 8 Zeichen)');return;}
+  const btn=$('#u-go'); btn.disabled=true; btn.textContent='Lege an...';
+  try{
+    await callAdmin('create',{email,password:pw,name,role,customer_id:cid});
+    await reload('users'); closeModal(); render(); toast('Login angelegt: '+email);
+  }catch(e){ btn.disabled=false; btn.textContent='Anlegen'; toast('Fehler: '+e.message); }
+}
+async function resetLogin(uid){
+  const u=state.users.find(x=>x.id===uid); const pw=genPw();
+  openModal({title:'Passwort setzen',
+    body:'<div class="frow"><label>Neues Passwort fuer '+esc(u?u.email:'')+'</label><input id="rp-pw" value="'+esc(pw)+'"></div><div class="pwbox">Neuer Vorschlag: <code>'+esc(pw)+'</code></div>',
+    footer:'<div class="spacer"></div><button class="btn ghost" onclick="closeModal()">Abbrechen</button><button class="btn" id="rp-go" onclick="doResetLogin(\''+uid+'\')">Setzen</button>'});
+}
+async function doResetLogin(uid){
+  const pw=$('#rp-pw').value; if(pw.length<8){toast('Min. 8 Zeichen');return;}
+  const btn=$('#rp-go'); btn.disabled=true; btn.textContent='...';
+  try{ await callAdmin('set_password',{id:uid,password:pw}); closeModal(); toast('Passwort gesetzt'); }
+  catch(e){ btn.disabled=false; btn.textContent='Setzen'; toast('Fehler: '+e.message); }
+}
+async function deleteLogin(uid){
+  if(!confirm('Login wirklich entfernen?'))return;
+  try{ await callAdmin('delete',{id:uid}); await reload('users'); render(); toast('Login entfernt'); }
+  catch(e){ toast('Fehler: '+e.message); }
+}
+
+/* ---- Tickets ---- */
+function addTicketModal(cid){
+  const custOpts=state.customers.map(c=>'<option value="'+c.id+'"'+(c.id===cid?' selected':'')+'>'+esc(c.name)+'</option>').join('');
+  openModal({title:'Neues Ticket',
+    body:
+      '<div class="frow"><label>Kunde</label><select id="t-cust">'+custOpts+'</select></div>'+
+      '<div class="frow"><label>Betreff *</label><input id="t-betreff"></div>'+
+      '<div class="frow2"><div class="frow"><label>Prioritaet</label><select id="t-prio">'+TICKET_PRIO.map(p=>'<option'+(p==='mittel'?' selected':'')+'>'+p+'</option>').join('')+'</select></div>'+
+      '<div class="frow"><label>Status</label><select id="t-status">'+TICKET_STATUS.map(s=>'<option value="'+s.v+'">'+s.l+'</option>').join('')+'</select></div></div>'+
+      '<div class="frow"><label>Beschreibung</label><textarea id="t-desc"></textarea></div>',
+    footer:'<div class="spacer"></div><button class="btn ghost" onclick="closeModal()">Abbrechen</button><button class="btn" onclick="saveTicket()">Anlegen</button>'});
+}
+async function saveTicket(){
+  const betreff=$('#t-betreff').value.trim(); if(!betreff){toast('Betreff fehlt');return;}
+  const payload={customer_id:$('#t-cust').value,betreff,beschreibung:$('#t-desc').value.trim(),prio:$('#t-prio').value,status:$('#t-status').value,created_by:state.profile.id};
+  const res=await sb.from('support_tickets').insert(payload);
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  await reload('tickets'); closeModal(); render(); toast('Ticket angelegt');
+}
+async function setTicketStatus(id,val){
+  const res=await sb.from('support_tickets').update({status:val}).eq('id',id);
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  await reload('tickets'); render(); toast('Ticket aktualisiert');
+}
+
+/* ---- Aktivitaet ---- */
+function addActivityModal(cid){
+  openModal({title:'Notiz / Aktivitaet',
+    body:'<div class="frow"><label>Eintrag *</label><textarea id="a-text" placeholder="z.B. Onboarding-Call gefuehrt, Stelle besprochen..."></textarea></div>',
+    footer:'<div class="spacer"></div><button class="btn ghost" onclick="closeModal()">Abbrechen</button><button class="btn" onclick="saveActivity(\''+cid+'\')">Speichern</button>'});
+}
+async function saveActivity(cid){
+  const text=$('#a-text').value.trim(); if(!text){toast('Text fehlt');return;}
+  const res=await sb.from('activity_log').insert({customer_id:cid,text,typ:'notiz',actor:state.profile.name||state.profile.email});
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  await reload('activity'); closeModal(); render(); toast('Eintrag gespeichert');
+}
 
 function editCustomer(id){
-  const c = id? cust(id) : {name:'',branchen:[],theme:'galabau',ort:'',telefon:'',email:'',notizen:''};
+  const c = id? cust(id) : {name:'',branchen:[],theme:'galabau',ort:'',telefon:'',email:'',notizen:'',ansprechpartner:'',strasse:'',plz:'',website:'',primary_color:''};
   const fams = state.branchen.filter(b=>!b.parent_id);
   const subs = state.branchen.filter(b=>b.parent_id);
   const branchChips = fams.map(f=>{
@@ -389,14 +709,18 @@ function editCustomer(id){
     title: id?'Kunde bearbeiten':'Neuer Kunde', wide:true,
     body:
       '<div class="frow"><label>Betriebsname *</label><input id="c-name" value="'+esc(c.name)+'"></div>'+
-      '<div class="frow2"><div class="frow"><label>Ort</label><input id="c-ort" value="'+esc(c.ort||'')+'"></div>'+
+      '<div class="frow2"><div class="frow"><label>Ansprechpartner</label><input id="c-ap" value="'+esc(c.ansprechpartner||'')+'"></div>'+
       '<div class="frow"><label>Telefon</label><input id="c-tel" value="'+esc(c.telefon||'')+'"></div></div>'+
       '<div class="frow"><label>E-Mail</label><input id="c-email" value="'+esc(c.email||'')+'"></div>'+
+      '<div class="frow"><label>Website</label><input id="c-web" value="'+esc(c.website||'')+'" placeholder="https://"></div>'+
+      '<div class="frow"><label>Strasse & Nr.</label><input id="c-str" value="'+esc(c.strasse||'')+'"></div>'+
+      '<div class="frow2"><div class="frow"><label>PLZ</label><input id="c-plz" value="'+esc(c.plz||'')+'"></div>'+
+      '<div class="frow"><label>Ort</label><input id="c-ort" value="'+esc(c.ort||'')+'"></div></div>'+
       '<div class="divider"></div><div class="sec-title">Branchen <span class="muted" style="text-transform:none;font-weight:500">(erste bestimmt das Farbschema im Kunden-OS)</span></div>'+
       branchChips+
       '<input type="hidden" id="c-theme" value="'+esc(c.theme||'galabau')+'">'+
-      '<div class="frow" style="margin-top:8px"><label>Notizen</label><textarea id="c-notiz">'+esc(c.notizen||'')+'</textarea></div>'+
-      (id?'<div class="hint">User-Logins fuer diesen Kunden werden in der naechsten Welle (Supabase Edge Function) anlegbar.</div>':''),
+      '<div class="frow2" style="margin-top:8px"><div class="frow"><label>Akzentfarbe (optional)</label><input id="c-color" type="text" value="'+esc(c.primary_color||'')+'" placeholder="#16A34A"></div><div class="frow"></div></div>'+
+      '<div class="frow"><label>Interne Notizen</label><textarea id="c-notiz">'+esc(c.notizen||'')+'</textarea></div>',
     footer:
       (id?'<button class="btn danger sm" onclick="deleteCustomer(\''+id+'\')">Loeschen</button>':'')+
       '<div class="spacer"></div>'+
@@ -414,12 +738,16 @@ async function saveCustomer(id){
   if(!name){toast('Name fehlt');return;}
   const branchen=[...document.querySelectorAll('.selchip.on')].map(e=>e.dataset.br);
   const payload={name,ort:$('#c-ort').value.trim(),telefon:$('#c-tel').value.trim(),email:$('#c-email').value.trim(),
+    ansprechpartner:$('#c-ap').value.trim(),website:$('#c-web').value.trim(),strasse:$('#c-str').value.trim(),
+    plz:$('#c-plz').value.trim(),primary_color:$('#c-color').value.trim()||null,
     notizen:$('#c-notiz').value.trim(),branchen,theme:$('#c-theme').value||'galabau'};
-  let res;
+  let res, newId=id;
   if(id) res=await sb.from('customers').update(payload).eq('id',id);
-  else res=await sb.from('customers').insert(payload);
+  else { const ins=await sb.from('customers').insert(payload).select('id').single(); res=ins; newId=ins.data?.id; }
   if(res.error){toast('Fehler: '+res.error.message);return;}
-  await reload('customers'); closeModal(); render(); toast(id?'Kunde gespeichert':'Kunde angelegt');
+  await reload('customers'); closeModal();
+  if(state.view==='kunde'&&id) render(); else { state.selCustomer=newId; state.view='kunde'; render(); }
+  toast(id?'Kunde gespeichert':'Kunde angelegt');
 }
 async function deleteCustomer(id){
   if(!confirm('Kunde wirklich loeschen? Stellen werden mitgeloescht, Bewerber bleiben (ohne Zuordnung).'))return;
@@ -449,8 +777,8 @@ function viewStellen(){
       : empty('\u25A6','Keine Stellenanzeigen','Lege die erste Stelle an.'))+
     '</div>';
 }
-function editStelle(id){
-  const s=id? stelleById(id):{titel:'',customer_id:state.customers[0]?.id||'',branche:'',ort:'',beschreibung:'',status:'aktiv'};
+function editStelle(id,preCust){
+  const s=id? stelleById(id):{titel:'',customer_id:preCust||state.customers[0]?.id||'',branche:'',ort:'',beschreibung:'',status:'aktiv'};
   if(!state.customers.length){toast('Erst einen Kunden anlegen');setView('kunden');return;}
   const custOpts=state.customers.map(c=>'<option value="'+c.id+'"'+(c.id===s.customer_id?' selected':'')+'>'+esc(c.name)+'</option>').join('');
   const statusOpts=['aktiv','pausiert','geschlossen'].map(o=>'<option'+(o===s.status?' selected':'')+'>'+o+'</option>').join('');
@@ -487,10 +815,42 @@ async function deleteStelle(id){
 function viewBewerber(){
   $('#pgActions').innerHTML='<button class="btn ghost" onclick="openCsvImport()">CSV-Import</button> <button class="btn" onclick="editBewerber()">+ Bewerber</button>';
   const q=state.search.toLowerCase();
-  const rows=state.bewerber.filter(b=>!q||b.name.toLowerCase().includes(q)||(b.email||'').toLowerCase().includes(q));
-  $('#content').innerHTML=
-    toolbar('Bewerber suchen...')+
-    '<div class="card tablecard">'+tableBewerber(rows,true,true)+'</div>';
+  const rows=state.bewerber.filter(b=>!q||b.name.toLowerCase().includes(q)||(b.email||'').toLowerCase().includes(q)||(b.telefon||'').includes(q));
+  const seg='<div class="toolbar"><div class="search"><span class="si">\u2315</span><input placeholder="Bewerber suchen..." value="'+esc(state.search)+'" oninput="state.search=this.value;render()"></div>'+
+    '<div class="seg"><button class="'+(state.bewView==='tabelle'?'on':'')+'" onclick="state.bewView=\'tabelle\';render()">Tabelle</button>'+
+    '<button class="'+(state.bewView==='pipeline'?'on':'')+'" onclick="state.bewView=\'pipeline\';render()">Pipeline</button></div></div>';
+  if(state.bewView==='pipeline'){
+    $('#content').innerHTML=seg+renderBoard(rows);
+    return;
+  }
+  $('#content').innerHTML=seg+'<div class="card tablecard">'+tableBewerber(rows,true,true)+'</div>';
+}
+function renderBoard(rows){
+  return '<div class="board">'+STATUS.map(col=>{
+    const items=rows.filter(b=>b.status===col.id);
+    return '<div class="kcol" data-status="'+col.id+'" ondragover="kDragOver(event)" ondragleave="kDragLeave(event)" ondrop="kDrop(event,\''+col.id+'\')">'+
+      '<div class="kcolh"><span class="tag-s '+col.c+'" style="font-size:11px">'+esc(col.label)+'</span><span class="n">'+items.length+'</span></div>'+
+      '<div class="kbody">'+items.map(b=>
+        '<div class="kcard" draggable="true" ondragstart="kDragStart(event,\''+b.id+'\')" onclick="editBewerber(\''+b.id+'\')">'+
+        '<b>'+esc(b.name)+'</b>'+
+        '<div class="sub">'+esc(cust(b.customer_id)?.name||'\u2014 offen')+'</div>'+
+        '<div class="kf"><span class="miniquelle">'+esc(b.quelle||'manuell')+'</span>'+(b.rating?'<span class="stars">'+'\u2605'.repeat(b.rating)+'</span>':'')+'</div>'+
+        '</div>'
+      ).join('')+'</div></div>';
+  }).join('')+'</div>';
+}
+let DRAG_ID=null;
+function kDragStart(e,id){ DRAG_ID=id; e.dataTransfer.effectAllowed='move'; }
+function kDragOver(e){ e.preventDefault(); e.currentTarget.classList.add('drag'); }
+function kDragLeave(e){ e.currentTarget.classList.remove('drag'); }
+async function kDrop(e,status){
+  e.preventDefault(); e.currentTarget.classList.remove('drag');
+  if(!DRAG_ID)return; const id=DRAG_ID; DRAG_ID=null;
+  const b=state.bewerber.find(x=>x.id===id); if(!b||b.status===status)return;
+  b.status=status; render();
+  const res=await sb.from('bewerber').update({status}).eq('id',id);
+  if(res.error){toast('Fehler: '+res.error.message);await reload('bewerber');render();return;}
+  await reload('bewerber'); toast('Status: '+statusOf(status).label);
 }
 function tableBewerber(rows, showCust, clickable){
   if(!rows.length) return empty('\u263A','Keine Bewerber','Pflege Bewerber ein oder importiere eine CSV.');
@@ -520,6 +880,8 @@ function editBewerber(id){
       '<div class="frow"><label>Status</label><select id="b-status">'+statusOpts+'</select></div></div>'+
       '<div class="frow"><label>Kunde (Zuordnung)</label><select id="b-cust" onchange="bStelleSync()">'+custOpts+'</select></div>'+
       '<div class="frow"><label>Stelle</label><select id="b-stelle"></select></div>'+
+      '<div class="frow2"><div class="frow"><label>Bewertung</label><div class="stars" id="b-stars">'+[1,2,3,4,5].map(n=>'<span class="star'+((b.rating||0)>=n?' on':'')+'" data-n="'+n+'" onclick="setStar('+n+')">\u2605</span>').join('')+'</div><input type="hidden" id="b-rating" value="'+(b.rating||0)+'"></div>'+
+      '<div class="frow"><label>Tags (Komma-getrennt)</label><input id="b-tags" value="'+esc((b.tags||[]).join(', '))+'" placeholder="z.B. Fuehrerschein, Erfahrung"></div></div>'+
       '<div class="frow"><label>Notizen</label><textarea id="b-notiz">'+esc(b.notizen||'')+'</textarea></div>'+
       extraBlock(b.extra),
     footer:(id?'<button class="btn danger sm" onclick="deleteBewerber(\''+id+'\')">Loeschen</button>':'')+
@@ -540,10 +902,16 @@ function bStelleSync(selId){
   const opts=state.stellen.filter(s=>s.customer_id===cid);
   $('#b-stelle').innerHTML='<option value="">\u2014 keine Stelle</option>'+opts.map(s=>'<option value="'+s.id+'"'+(s.id===selId?' selected':'')+'>'+esc(s.titel)+'</option>').join('');
 }
+function setStar(n){
+  const cur=Number($('#b-rating').value)||0;
+  const val=cur===n?0:n; $('#b-rating').value=val;
+  [...document.querySelectorAll('#b-stars .star')].forEach(s=>s.classList.toggle('on',Number(s.dataset.n)<=val));
+}
 async function saveBewerber(id){
   const name=$('#b-name').value.trim(); if(!name){toast('Name fehlt');return;}
+  const tags=$('#b-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
   const payload={name,email:$('#b-email').value.trim(),telefon:$('#b-tel').value.trim(),
-    quelle:$('#b-quelle').value,status:$('#b-status').value,
+    quelle:$('#b-quelle').value,status:$('#b-status').value,rating:Number($('#b-rating').value)||0,tags,
     customer_id:$('#b-cust').value||null,stellenanzeige_id:$('#b-stelle').value||null,notizen:$('#b-notiz').value.trim()};
   let res= id? await sb.from('bewerber').update(payload).eq('id',id) : await sb.from('bewerber').insert(payload);
   if(res.error){toast('Fehler: '+res.error.message);return;}
@@ -718,6 +1086,62 @@ async function mAssign(bid){
   const res=await sb.from('bewerber').update({customer_id:cid,stellenanzeige_id:sid,status:'gesichtet'}).eq('id',bid);
   if(res.error){toast('Fehler: '+res.error.message);return;}
   await reload('bewerber'); render(); toast('Bewerber zugeordnet');
+}
+
+/* ===================== SUPPORT (global) ===================== */
+function viewSupport(){
+  $('#pgActions').innerHTML='<button class="btn" onclick="addTicketModal(state.customers[0]&&state.customers[0].id)">+ Ticket</button>';
+  const groups=TICKET_STATUS.map(s=>({s,items:state.tickets.filter(t=>t.status===s.v)}));
+  const open=state.tickets.filter(t=>t.status!=='geloest');
+  $('#content').innerHTML=
+    '<div class="stats" style="grid-template-columns:repeat(4,1fr)">'+
+      TICKET_STATUS.map(s=>stat(state.tickets.filter(t=>t.status===s.v).length,s.l)).join('')+
+    '</div>'+
+    (state.tickets.length?
+      '<div class="card tablecard"><table><thead><tr><th>Betreff</th><th>Kunde</th><th class="hide-sm">Prio</th><th>Status</th><th class="hide-sm">Datum</th></tr></thead><tbody>'+
+      state.tickets.map(t=>{const ts=lookup(TICKET_STATUS,t.status);return '<tr onclick="openTicket(\''+t.id+'\')"><td><b>'+esc(t.betreff)+'</b></td>'+
+        '<td>'+esc(cust(t.customer_id)?.name||'\u2014')+'</td>'+
+        '<td class="hide-sm"><span class="tk-prio '+esc(t.prio)+'"></span> '+esc(t.prio)+'</td>'+
+        '<td><span class="tag-s '+ts.c+'">'+esc(ts.l)+'</span></td>'+
+        '<td class="hide-sm muted">'+fmtDate(t.created_at)+'</td></tr>';}).join('')+'</tbody></table></div>'
+      : empty('\u2691','Keine Tickets','Support-Anfragen der Kunden erscheinen hier.'));
+}
+function openTicket(id){
+  const t=state.tickets.find(x=>x.id===id); if(!t)return;
+  openModal({title:esc(t.betreff),
+    body:
+      '<div class="kv" style="margin-bottom:14px">'+row('Kunde',cust(t.customer_id)?.name)+row('Prio',t.prio)+row('Erstellt',fmtDate(t.created_at))+'</div>'+
+      '<div class="frow"><label>Status</label><select id="tk-status">'+TICKET_STATUS.map(s=>'<option value="'+s.v+'"'+(s.v===t.status?' selected':'')+'>'+s.l+'</option>').join('')+'</select></div>'+
+      '<div class="frow"><label>Beschreibung</label><textarea id="tk-desc">'+esc(t.beschreibung||'')+'</textarea></div>',
+    footer:'<button class="btn danger sm" onclick="deleteTicket(\''+id+'\')">Loeschen</button><div class="spacer"></div><button class="btn ghost" onclick="closeModal()">Schliessen</button><button class="btn" onclick="updateTicket(\''+id+'\')">Speichern</button>'});
+}
+async function updateTicket(id){
+  const res=await sb.from('support_tickets').update({status:$('#tk-status').value,beschreibung:$('#tk-desc').value.trim()}).eq('id',id);
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  await reload('tickets'); closeModal(); render(); toast('Ticket gespeichert');
+}
+async function deleteTicket(id){
+  if(!confirm('Ticket loeschen?'))return;
+  const res=await sb.from('support_tickets').delete().eq('id',id);
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  await reload('tickets'); closeModal(); render(); toast('Ticket geloescht');
+}
+
+/* ===================== LOGINS & TEAM (global) ===================== */
+function viewLogins(){
+  $('#pgActions').innerHTML='<button class="btn" onclick="createLoginModal(null)">+ Login anlegen</button>';
+  const admins=state.users.filter(u=>u.role==='gc_admin');
+  const owners=state.users.filter(u=>u.role!=='gc_admin');
+  const block=(title,arr,isAdmin)=> '<div class="card tablecard" style="margin-bottom:18px"><div class="cardh"><b>'+title+'</b><span class="tag-s '+(isAdmin?'blue':'gray')+'" style="margin-left:4px">'+arr.length+'</span></div>'+
+    (arr.length? arr.map(u=>'<div class="listrow"><div class="av" style="width:36px;height:36px;border-radius:10px;font-size:14px">'+esc(initials(u.name||u.email))+'</div>'+
+      '<div class="lt"><b>'+esc(u.name||u.email)+'</b><small>'+esc(u.email)+(u.customer_id?' \u00B7 '+esc(cust(u.customer_id)?.name||'?'):'')+'</small></div>'+
+      '<button class="btn ghost sm" onclick="resetLogin(\''+u.id+'\')">Passwort</button>'+
+      (u.id===state.profile.id?'<span class="tag-s green">Du</span>':'<button class="btn danger sm" onclick="deleteLogin(\''+u.id+'\')">Entfernen</button>')+
+      '</div>').join('') : '<div class="cardp muted" style="font-size:13.5px">Keine Eintraege.</div>')+'</div>';
+  $('#content').innerHTML=
+    '<div class="card" style="padding:13px 16px;margin-bottom:18px"><span class="muted" style="font-size:13.5px">Logins anlegen, Passwoerter setzen und Zugaenge entfernen. Owner-Logins gehoeren zu einem Kunden, GC-Admins haben Vollzugriff.</span></div>'+
+    block('GreenCareers-Team (Admins)',admins,true)+
+    block('Kunden-Logins (Inhaber)',owners,false);
 }
 
 /* ===================== UI PRIMITIVES ===================== */
