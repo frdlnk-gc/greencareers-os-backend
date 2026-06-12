@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>GreenCareers OS Backend</title>
+<style>
+:root{
+  --green:#16A34A; --green-2:#15803D; --ink:#0B1A12; --ink-2:#10231A;
+  --sidebar:#0C1B13; --sidebar-2:#102619; --sidebar-text:#9DBCA8;
+  --canvas:#F4F6F4; --card:#FFFFFF; --line:#E3E8E3; --line-2:#EDF1ED;
+  --text:#16261C; --muted:#6B7C70; --soft:#EAF6EE; --danger:#DC2626;
+  --radius:14px; --shadow:0 1px 3px rgba(16,38,25,.06),0 8px 24px rgba(16,38,25,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--canvas);color:var(--text);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.45}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:15px}
+a{color:var(--green);text-decoration:none}
+.hidden{display:none!important}
+
+/* ---------- LOGIN ---------- */
+#login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(1200px 600px at 50% -10%,#16341f 0%,var(--ink) 60%);padding:24px;z-index:50}
+.loginbox{width:100%;max-width:400px;background:var(--card);border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.4);padding:34px 30px}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.brand .dot{width:30px;height:30px;border-radius:9px;background:var(--green);display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px}
+.brand b{font-size:17px;letter-spacing:-.2px}
+.loginbox .tag{display:inline-block;margin:4px 0 22px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--green-2);background:var(--soft);padding:4px 9px;border-radius:999px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.field input{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:11px;background:#fff;outline:none;transition:border-color .15s}
+.field input:focus{border-color:var(--green)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:11px;padding:12px 16px;font-weight:700;font-size:15px;background:var(--green);color:#fff;transition:filter .15s,transform .05s}
+.btn:hover{filter:brightness(1.05)} .btn:active{transform:translateY(1px)}
+.btn.full{width:100%}
+.btn.ghost{background:#fff;color:var(--text);border:1px solid var(--line)}
+.btn.ghost:hover{background:var(--line-2)}
+.btn.sm{padding:8px 12px;font-size:14px;border-radius:9px}
+.btn.danger{background:#fff;color:var(--danger);border:1px solid #F1C7C7}
+.btn.danger:hover{background:#FEF2F2}
+.loginmsg{margin-top:12px;font-size:13px;min-height:18px}
+.loginmsg.err{color:var(--danger)}
+
+/* ---------- APP SHELL ---------- */
+#app{display:flex;min-height:100vh}
+.sidebar{width:236px;background:var(--sidebar);color:var(--sidebar-text);display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh}
+.sidebar .top{padding:20px 18px 14px}
+.sidebar .brand b{color:#fff}
+.sidebar .brand .dot{background:var(--green)}
+.sidebar .env{font-size:11px;color:#5f7a68;margin-top:8px;padding-left:2px}
+.nav{padding:8px 12px;flex:1;overflow:auto}
+.navitem{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;color:var(--sidebar-text);font-weight:600;font-size:14.5px;cursor:pointer;margin-bottom:2px;transition:background .12s,color .12s}
+.navitem:hover{background:var(--sidebar-2);color:#fff}
+.navitem.active{background:var(--green);color:#fff}
+.navitem .ic{width:18px;text-align:center;font-size:16px}
+.navitem .ct{margin-left:auto;font-size:12px;background:rgba(255,255,255,.12);padding:1px 7px;border-radius:999px;font-weight:700}
+.sidebar .bottom{padding:14px;border-top:1px solid rgba(255,255,255,.06)}
+.who{font-size:13px;color:#cfe3d6;margin-bottom:8px;word-break:break-all}
+.who small{display:block;color:#6f8c79;font-size:11px}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:14px;padding:18px 26px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:20}
+.topbar h1{font-size:20px;letter-spacing:-.3px;font-weight:800}
+.topbar .sub{color:var(--muted);font-size:13px;margin-top:1px}
+.topbar .spacer{flex:1}
+.content{padding:24px 26px 60px;max-width:1180px;width:100%}
+
+/* ---------- CARDS / TABLES ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.stat{padding:16px 18px}
+.stat .n{font-size:28px;font-weight:800;letter-spacing:-1px}
+.stat .l{color:var(--muted);font-size:13px;margin-top:2px}
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.toolbar .search{flex:1;min-width:180px;position:relative}
+.toolbar .search input{width:100%;padding:10px 13px 10px 36px;border:1px solid var(--line);border-radius:11px;background:#fff;outline:none}
+.toolbar .search input:focus{border-color:var(--green)}
+.toolbar .search .si{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
+table{width:100%;border-collapse:collapse}
+.tablecard{overflow:hidden}
+th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--line-2)}
+td{padding:13px 16px;border-bottom:1px solid var(--line-2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr{cursor:pointer;transition:background .1s}
+tbody tr:hover{background:var(--soft)}
+.tag-s{display:inline-block;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--line-2);color:var(--muted)}
+.tag-s.green{background:var(--soft);color:var(--green-2)}
+.tag-s.orange{background:#FEF0E6;color:#C2410C}
+.tag-s.gold{background:#FBF3D8;color:#A16207}
+.tag-s.blue{background:#E6F0FB;color:#1D5FB0}
+.tag-s.gray{background:var(--line-2);color:var(--muted)}
+.tag-s.red{background:#FEECEC;color:var(--danger)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.empty{padding:48px 20px;text-align:center;color:var(--muted)}
+.empty .big{font-size:34px;margin-bottom:8px}
+.muted{color:var(--muted)}
+.right{text-align:right}
+
+/* ---------- MODAL ---------- */
+.modal-bg{position:fixed;inset:0;background:rgba(11,26,18,.5);backdrop-filter:blur(2px);display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;z-index:60;overflow:auto}
+.modal{background:#fff;border-radius:18px;width:100%;max-width:560px;box-shadow:0 30px 80px rgba(0,0,0,.3);animation:pop .15s ease}
+@keyframes pop{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal.wide{max-width:760px}
+.modal-h{display:flex;align-items:center;gap:12px;padding:20px 24px;border-bottom:1px solid var(--line)}
+.modal-h h3{font-size:18px;font-weight:800;letter-spacing:-.2px}
+.modal-h .x{margin-left:auto;width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:18px;display:grid;place-items:center}
+.modal-h .x:hover{background:var(--line-2)}
+.modal-b{padding:22px 24px;max-height:64vh;overflow:auto}
+.modal-f{display:flex;gap:10px;justify-content:flex-end;padding:16px 24px;border-top:1px solid var(--line);background:var(--line-2);border-radius:0 0 18px 18px}
+.modal-f .spacer{flex:1}
+.frow{margin-bottom:15px}
+.frow label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.frow input,.frow select,.frow textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;outline:none}
+.frow input:focus,.frow select:focus,.frow textarea:focus{border-color:var(--green)}
+.frow textarea{min-height:80px;resize:vertical}
+.frow2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.selchips{display:flex;flex-wrap:wrap;gap:7px}
+.selchip{padding:7px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:600;background:#fff;color:var(--muted)}
+.selchip.on{background:var(--soft);border-color:var(--green);color:var(--green-2)}
+.hint{font-size:12.5px;color:var(--muted);margin-top:6px}
+.divider{height:1px;background:var(--line);margin:18px 0}
+.sec-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:4px 0 10px}
+
+/* CSV preview */
+.csvtable{border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:240px}
+.csvtable table{font-size:13px}
+.csvtable th,.csvtable td{padding:8px 10px;white-space:nowrap}
+.maprow{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center;margin-bottom:8px}
+.maprow .col{font-size:13px;font-weight:600;background:var(--line-2);padding:8px 10px;border-radius:8px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink-2);color:#fff;padding:12px 18px;border-radius:11px;font-weight:600;font-size:14px;box-shadow:0 12px 30px rgba(0,0,0,.3);z-index:80;animation:pop .15s ease}
+
+@media(max-width:860px){
+  .sidebar{position:fixed;left:0;top:0;z-index:40;transform:translateX(-100%);transition:transform .2s;box-shadow:0 0 50px rgba(0,0,0,.4)}
+  .sidebar.open{transform:translateX(0)}
+  .menubtn{display:grid!important}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .content{padding:18px 16px 60px}
+  .topbar{padding:14px 16px}
+  .frow2{grid-template-columns:1fr}
+  .hide-sm{display:none}
+}
+.menubtn{display:none;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:#fff;place-items:center;font-size:18px}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:39}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="loginbox">
+    <div class="brand"><span class="dot">G</span><b>GreenCareers OS</b></div>
+    <span class="tag">Backend · Intern</span>
+    <form id="loginForm" onsubmit="doLogin(event)">
+      <div class="field"><label>E-Mail</label><input id="li-email" type="email" autocomplete="username" required></div>
+      <div class="field"><label>Passwort</label><input id="li-pw" type="password" autocomplete="current-password" required></div>
+      <button class="btn full" type="submit" id="li-btn">Anmelden</button>
+      <div class="loginmsg" id="li-msg"></div>
+    </form>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <aside class="sidebar" id="sidebar">
+    <div class="top">
+      <div class="brand"><span class="dot">G</span><b>OS Backend</b></div>
+      <div class="env">Recruiting-Operations</div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="bottom">
+      <div class="who" id="who"></div>
+      <button class="btn ghost sm full" onclick="doLogout()">Abmelden</button>
+    </div>
+  </aside>
+  <div class="scrim hidden" id="scrim" onclick="toggleNav(false)"></div>
+  <main class="main">
+    <header class="topbar">
+      <button class="menubtn" onclick="toggleNav(true)">&#9776;</button>
+      <div>
+        <h1 id="pgTitle">Dashboard</h1>
+        <div class="sub" id="pgSub"></div>
+      </div>
+      <div class="spacer"></div>
+      <div id="pgActions"></div>
+    </header>
+    <div class="content" id="content"></div>
+  </main>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ===================== SUPABASE ===================== */
+const SUPABASE_URL = 'https://tfoopogxaqvfwbonabpi.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRmb29wb2d4YXF2Zndib25hYnBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNTQzMjQsImV4cCI6MjA5NjgzMDMyNH0.udWRPszXVOj7EG4bspmsU9HXbZYFRDn8QO9kZi2tw8M';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+/* ===================== STATE ===================== */
+const state = {
+  profile:null, view:'dashboard',
+  customers:[], stellen:[], bewerber:[], branchen:[],
+  search:'', filterCustomer:'all'
+};
+const STATUS = [
+  {id:'neu',label:'Neu',c:'gray'},
+  {id:'gesichtet',label:'Gesichtet',c:'blue'},
+  {id:'qualifiziert',label:'Qualifiziert',c:'green'},
+  {id:'anrufen',label:'Anrufen',c:'gold'},
+  {id:'vorgestellt',label:'Vorgestellt',c:'blue'},
+  {id:'eingestellt',label:'Eingestellt',c:'green'},
+  {id:'abgesagt',label:'Abgesagt',c:'red'}
+];
+const QUELLE = ['indeed','meta','manuell','csv','website'];
+const THEME_TAG = {galabau:'green',tiefbau:'orange',landwirtschaft:'gold'};
+
+/* ===================== HELPERS ===================== */
+const $ = s => document.querySelector(s);
+const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const cust = id => state.customers.find(c=>c.id===id);
+const stelleById = id => state.stellen.find(s=>s.id===id);
+const statusOf = id => STATUS.find(s=>s.id===id) || {label:id,c:'gray'};
+function toast(msg){const r=$('#toastRoot');r.innerHTML='<div class="toast">'+esc(msg)+'</div>';setTimeout(()=>r.innerHTML='',2200);}
+function fmtDate(d){if(!d)return '';const x=new Date(d);return x.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});}
+
+/* ===================== AUTH ===================== */
+async function init(){
+  const {data:{session}} = await sb.auth.getSession();
+  if(session) await afterLogin(); else showLogin();
+}
+function showLogin(){ $('#login').classList.remove('hidden'); $('#app').classList.add('hidden'); }
+
+async function doLogin(e){
+  e.preventDefault();
+  const msg=$('#li-msg'); const btn=$('#li-btn');
+  msg.className='loginmsg'; msg.textContent=''; btn.disabled=true; btn.textContent='Pruefe...';
+  const email=$('#li-email').value.trim(); const pw=$('#li-pw').value;
+  const {error} = await sb.auth.signInWithPassword({email,password:pw});
+  btn.disabled=false; btn.textContent='Anmelden';
+  if(error){ msg.className='loginmsg err'; msg.textContent='Login fehlgeschlagen: '+error.message; return; }
+  await afterLogin();
+}
+
+async function afterLogin(){
+  const {data:{user}} = await sb.auth.getUser();
+  const {data:prof,error} = await sb.from('profiles').select('*').eq('id',user.id).single();
+  if(error || !prof){ await sb.auth.signOut(); $('#li-msg').className='loginmsg err'; $('#li-msg').textContent='Kein Profil gefunden.'; showLogin(); return; }
+  if(prof.role!=='gc_admin'){
+    await sb.auth.signOut(); showLogin();
+    $('#li-msg').className='loginmsg err';
+    $('#li-msg').textContent='Dieser Login ist nur fuer GreenCareers-Mitarbeiter (gc_admin).';
+    return;
+  }
+  state.profile=prof;
+  $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
+  $('#who').innerHTML='<b>'+esc(prof.name||prof.email)+'</b><small>GC-Admin · Vollzugriff</small>';
+  await loadAll();
+  setView('dashboard');
+}
+async function doLogout(){ await sb.auth.signOut(); state.profile=null; showLogin(); $('#li-pw').value=''; }
+
+/* ===================== DATA ===================== */
+async function loadAll(){
+  const [c,s,b,br] = await Promise.all([
+    sb.from('customers').select('*').order('name'),
+    sb.from('stellenanzeigen').select('*').order('created_at',{ascending:false}),
+    sb.from('bewerber').select('*').order('created_at',{ascending:false}),
+    sb.from('branchen').select('*').order('sort')
+  ]);
+  state.customers = c.data||[]; state.stellen = s.data||[];
+  state.bewerber = b.data||[]; state.branchen = br.data||[];
+}
+async function reload(table){
+  if(table==='customers'){const {data}=await sb.from('customers').select('*').order('name');state.customers=data||[];}
+  if(table==='stellen'){const {data}=await sb.from('stellenanzeigen').select('*').order('created_at',{ascending:false});state.stellen=data||[];}
+  if(table==='bewerber'){const {data}=await sb.from('bewerber').select('*').order('created_at',{ascending:false});state.bewerber=data||[];}
+}
+
+/* ===================== NAV / ROUTER ===================== */
+const VIEWS = [
+  {id:'dashboard',label:'Dashboard',ic:'\u25C9'},
+  {id:'kunden',label:'Kunden',ic:'\u25A4'},
+  {id:'stellen',label:'Stellenanzeigen',ic:'\u25A6'},
+  {id:'bewerber',label:'Bewerber',ic:'\u263A'},
+  {id:'matching',label:'Bewerbungen',ic:'\u21C4'}
+];
+function renderNav(){
+  $('#nav').innerHTML = VIEWS.map(v=>{
+    let ct='';
+    if(v.id==='kunden')ct=state.customers.length;
+    if(v.id==='stellen')ct=state.stellen.length;
+    if(v.id==='bewerber')ct=state.bewerber.length;
+    return '<div class="navitem'+(state.view===v.id?' active':'')+'" onclick="setView(\''+v.id+'\')">'+
+      '<span class="ic">'+v.ic+'</span>'+v.label+(ct!==''?'<span class="ct">'+ct+'</span>':'')+'</div>';
+  }).join('');
+}
+function setView(v){ state.view=v; state.search=''; renderNav(); toggleNav(false); render(); }
+function toggleNav(open){ $('#sidebar').classList.toggle('open',open); $('#scrim').classList.toggle('hidden',!open); }
+
+function render(){
+  renderNav();
+  const titles={dashboard:'Dashboard',kunden:'Kunden',stellen:'Stellenanzeigen',bewerber:'Bewerber',matching:'Bewerbungen durchfuehren'};
+  const subs={
+    dashboard:'Recruiting-Operations auf einen Blick',
+    kunden:'Betriebe anlegen, bearbeiten, verwalten',
+    stellen:'Offene Stellen aller Kunden',
+    bewerber:'Eingehende Bewerber einpflegen & zuordnen',
+    matching:'Bewerber den Stellen & Kunden zuordnen'
+  };
+  $('#pgTitle').textContent=titles[state.view];
+  $('#pgSub').textContent=subs[state.view];
+  $('#pgActions').innerHTML='';
+  if(state.view==='dashboard') viewDashboard();
+  if(state.view==='kunden') viewKunden();
+  if(state.view==='stellen') viewStellen();
+  if(state.view==='bewerber') viewBewerber();
+  if(state.view==='matching') viewMatching();
+}
+
+/* ===================== DASHBOARD ===================== */
+function viewDashboard(){
+  const offen = state.stellen.filter(s=>s.status==='aktiv').length;
+  const qual = state.bewerber.filter(b=>b.status==='qualifiziert'||b.status==='anrufen').length;
+  const unassigned = state.bewerber.filter(b=>!b.customer_id).length;
+  $('#content').innerHTML =
+    '<div class="stats">'+
+      stat(state.customers.length,'Kunden')+
+      stat(offen,'Offene Stellen')+
+      stat(state.bewerber.length,'Bewerber gesamt')+
+      stat(qual,'Qualifiziert / Anrufen')+
+    '</div>'+
+    '<div class="card tablecard" style="margin-bottom:22px">'+
+      '<div style="padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center">'+
+        '<b>Nicht zugeordnete Bewerber</b>'+
+        '<span class="tag-s '+(unassigned?'gold':'green')+'" style="margin-left:10px">'+unassigned+'</span>'+
+        '<div style="flex:1"></div>'+
+        '<button class="btn sm" onclick="setView(\'matching\')">Zuordnen \u2192</button>'+
+      '</div>'+
+      tableBewerber(state.bewerber.filter(b=>!b.customer_id).slice(0,6), true)+
+    '</div>'+
+    '<div class="card tablecard">'+
+      '<div style="padding:16px 18px;border-bottom:1px solid var(--line)"><b>Neueste Bewerber</b></div>'+
+      tableBewerber(state.bewerber.slice(0,6), false)+
+    '</div>';
+}
+function stat(n,l){return '<div class="card stat"><div class="n">'+n+'</div><div class="l">'+esc(l)+'</div></div>';}
+
+/* ===================== KUNDEN ===================== */
+function viewKunden(){
+  $('#pgActions').innerHTML='<button class="btn" onclick="editCustomer()">+ Neuer Kunde</button>';
+  const q=state.search.toLowerCase();
+  const rows=state.customers.filter(c=>!q||c.name.toLowerCase().includes(q)||(c.ort||'').toLowerCase().includes(q));
+  $('#content').innerHTML =
+    toolbar('Kunde oder Ort suchen...')+
+    '<div class="card tablecard">'+
+    (rows.length? '<table><thead><tr><th>Betrieb</th><th>Branchen</th><th class="hide-sm">Ort</th><th class="right">Stellen</th><th class="right">Bewerber</th></tr></thead><tbody>'+
+      rows.map(c=>{
+        const ns=state.stellen.filter(s=>s.customer_id===c.id).length;
+        const nb=state.bewerber.filter(b=>b.customer_id===c.id).length;
+        return '<tr onclick="editCustomer(\''+c.id+'\')">'+
+          '<td><b>'+esc(c.name)+'</b></td>'+
+          '<td><div class="chips">'+(c.branchen||[]).slice(0,3).map(b=>'<span class="tag-s '+(THEME_TAG[c.theme]||'gray')+'">'+esc(b)+'</span>').join('')+'</div></td>'+
+          '<td class="hide-sm muted">'+esc(c.ort||'')+'</td>'+
+          '<td class="right">'+ns+'</td><td class="right">'+nb+'</td></tr>';
+      }).join('')+'</tbody></table>'
+      : empty('\u25A4','Noch keine Kunden','Lege den ersten Betrieb an.'))+
+    '</div>';
+}
+
+function editCustomer(id){
+  const c = id? cust(id) : {name:'',branchen:[],theme:'galabau',ort:'',telefon:'',email:'',notizen:''};
+  const fams = state.branchen.filter(b=>!b.parent_id);
+  const subs = state.branchen.filter(b=>b.parent_id);
+  const branchChips = fams.map(f=>{
+    const kids = subs.filter(s=>s.parent_id===f.id);
+    return '<div style="margin-bottom:10px"><div class="sec-title" style="margin-bottom:6px">'+esc(f.name)+'</div><div class="selchips">'+
+      kids.map(k=>'<span class="selchip'+((c.branchen||[]).includes(k.name)?' on':'')+'" data-br="'+esc(k.name)+'" data-theme="'+esc(k.theme)+'" onclick="toggleBranche(this)">'+esc(k.name)+'</span>').join('')+
+      '</div></div>';
+  }).join('');
+  const users = []; // user-provisioning kommt mit Edge Function
+  openModal({
+    title: id?'Kunde bearbeiten':'Neuer Kunde', wide:true,
+    body:
+      '<div class="frow"><label>Betriebsname *</label><input id="c-name" value="'+esc(c.name)+'"></div>'+
+      '<div class="frow2"><div class="frow"><label>Ort</label><input id="c-ort" value="'+esc(c.ort||'')+'"></div>'+
+      '<div class="frow"><label>Telefon</label><input id="c-tel" value="'+esc(c.telefon||'')+'"></div></div>'+
+      '<div class="frow"><label>E-Mail</label><input id="c-email" value="'+esc(c.email||'')+'"></div>'+
+      '<div class="divider"></div><div class="sec-title">Branchen <span class="muted" style="text-transform:none;font-weight:500">(erste bestimmt das Farbschema im Kunden-OS)</span></div>'+
+      branchChips+
+      '<input type="hidden" id="c-theme" value="'+esc(c.theme||'galabau')+'">'+
+      '<div class="frow" style="margin-top:8px"><label>Notizen</label><textarea id="c-notiz">'+esc(c.notizen||'')+'</textarea></div>'+
+      (id?'<div class="hint">User-Logins fuer diesen Kunden werden in der naechsten Welle (Supabase Edge Function) anlegbar.</div>':''),
+    footer:
+      (id?'<button class="btn danger sm" onclick="deleteCustomer(\''+id+'\')">Loeschen</button>':'')+
+      '<div class="spacer"></div>'+
+      '<button class="btn ghost" onclick="closeModal()">Abbrechen</button>'+
+      '<button class="btn" onclick="saveCustomer('+(id?"'"+id+"'":'null')+')">Speichern</button>'
+  });
+}
+function toggleBranche(el){
+  el.classList.toggle('on');
+  const sel=[...document.querySelectorAll('.selchip.on')];
+  if(sel.length){ $('#c-theme').value = sel[0].dataset.theme || 'galabau'; }
+}
+async function saveCustomer(id){
+  const name=$('#c-name').value.trim();
+  if(!name){toast('Name fehlt');return;}
+  const branchen=[...document.querySelectorAll('.selchip.on')].map(e=>e.dataset.br);
+  const payload={name,ort:$('#c-ort').value.trim(),telefon:$('#c-tel').value.trim(),email:$('#c-email').value.trim(),
+    notizen:$('#c-notiz').value.trim(),branchen,theme:$('#c-theme').value||'galabau'};
+  let res;
+  if(id) res=await sb.from('customers').update(payload).eq('id',id);
+  else res=await sb.from('customers').insert(payload);
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  await reload('customers'); closeModal(); render(); toast(id?'Kunde gespeichert':'Kunde angelegt');
+}
+async function deleteCustomer(id){
+  if(!confirm('Kunde wirklich loeschen? Stellen werden mitgeloescht, Bewerber bleiben (ohne Zuordnung).'))return;
+  const res=await sb.from('customers').delete().eq('id',id);
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  await loadAll(); closeModal(); render(); toast('Kunde geloescht');
+}
+
+/* ===================== STELLENANZEIGEN ===================== */
+function viewStellen(){
+  $('#pgActions').innerHTML='<button class="btn" onclick="editStelle()">+ Neue Stelle</button>';
+  const q=state.search.toLowerCase();
+  const rows=state.stellen.filter(s=>!q||s.titel.toLowerCase().includes(q)||(cust(s.customer_id)?.name||'').toLowerCase().includes(q));
+  $('#content').innerHTML=
+    toolbar('Stelle oder Kunde suchen...')+
+    '<div class="card tablecard">'+
+    (rows.length? '<table><thead><tr><th>Titel</th><th>Kunde</th><th class="hide-sm">Ort</th><th class="right">Bewerber</th><th>Status</th></tr></thead><tbody>'+
+      rows.map(s=>{
+        const nb=state.bewerber.filter(b=>b.stellenanzeige_id===s.id).length;
+        const st=s.status==='aktiv'?'green':s.status==='pausiert'?'gold':'gray';
+        return '<tr onclick="editStelle(\''+s.id+'\')"><td><b>'+esc(s.titel)+'</b><div class="muted" style="font-size:12px">'+esc(s.branche||'')+'</div></td>'+
+          '<td>'+esc(cust(s.customer_id)?.name||'\u2014')+'</td>'+
+          '<td class="hide-sm muted">'+esc(s.ort||'')+'</td>'+
+          '<td class="right">'+nb+'</td>'+
+          '<td><span class="tag-s '+st+'">'+esc(s.status)+'</span></td></tr>';
+      }).join('')+'</tbody></table>'
+      : empty('\u25A6','Keine Stellenanzeigen','Lege die erste Stelle an.'))+
+    '</div>';
+}
+function editStelle(id){
+  const s=id? stelleById(id):{titel:'',customer_id:state.customers[0]?.id||'',branche:'',ort:'',beschreibung:'',status:'aktiv'};
+  if(!state.customers.length){toast('Erst einen Kunden anlegen');setView('kunden');return;}
+  const custOpts=state.customers.map(c=>'<option value="'+c.id+'"'+(c.id===s.customer_id?' selected':'')+'>'+esc(c.name)+'</option>').join('');
+  const statusOpts=['aktiv','pausiert','geschlossen'].map(o=>'<option'+(o===s.status?' selected':'')+'>'+o+'</option>').join('');
+  openModal({
+    title:id?'Stelle bearbeiten':'Neue Stelle',
+    body:
+      '<div class="frow"><label>Titel *</label><input id="s-titel" value="'+esc(s.titel)+'"></div>'+
+      '<div class="frow"><label>Kunde *</label><select id="s-cust">'+custOpts+'</select></div>'+
+      '<div class="frow2"><div class="frow"><label>Branche</label><input id="s-branche" value="'+esc(s.branche||'')+'"></div>'+
+      '<div class="frow"><label>Ort</label><input id="s-ort" value="'+esc(s.ort||'')+'"></div></div>'+
+      '<div class="frow"><label>Status</label><select id="s-status">'+statusOpts+'</select></div>'+
+      '<div class="frow"><label>Beschreibung</label><textarea id="s-besch">'+esc(s.beschreibung||'')+'</textarea></div>',
+    footer:(id?'<button class="btn danger sm" onclick="deleteStelle(\''+id+'\')">Loeschen</button>':'')+
+      '<div class="spacer"></div><button class="btn ghost" onclick="closeModal()">Abbrechen</button>'+
+      '<button class="btn" onclick="saveStelle('+(id?"'"+id+"'":'null')+')">Speichern</button>'
+  });
+}
+async function saveStelle(id){
+  const titel=$('#s-titel').value.trim(); if(!titel){toast('Titel fehlt');return;}
+  const payload={titel,customer_id:$('#s-cust').value,branche:$('#s-branche').value.trim(),
+    ort:$('#s-ort').value.trim(),status:$('#s-status').value,beschreibung:$('#s-besch').value.trim()};
+  let res= id? await sb.from('stellenanzeigen').update(payload).eq('id',id) : await sb.from('stellenanzeigen').insert(payload);
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  await reload('stellen'); closeModal(); render(); toast(id?'Stelle gespeichert':'Stelle angelegt');
+}
+async function deleteStelle(id){
+  if(!confirm('Stelle loeschen?'))return;
+  const res=await sb.from('stellenanzeigen').delete().eq('id',id);
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  await reload('stellen'); closeModal(); render(); toast('Stelle geloescht');
+}
+
+/* ===================== BEWERBER ===================== */
+function viewBewerber(){
+  $('#pgActions').innerHTML='<button class="btn ghost" onclick="openCsvImport()">CSV-Import</button> <button class="btn" onclick="editBewerber()">+ Bewerber</button>';
+  const q=state.search.toLowerCase();
+  const rows=state.bewerber.filter(b=>!q||b.name.toLowerCase().includes(q)||(b.email||'').toLowerCase().includes(q));
+  $('#content').innerHTML=
+    toolbar('Bewerber suchen...')+
+    '<div class="card tablecard">'+tableBewerber(rows,true,true)+'</div>';
+}
+function tableBewerber(rows, showCust, clickable){
+  if(!rows.length) return empty('\u263A','Keine Bewerber','Pflege Bewerber ein oder importiere eine CSV.');
+  return '<table><thead><tr><th>Name</th><th class="hide-sm">Kontakt</th>'+(showCust?'<th>Kunde</th>':'')+'<th>Quelle</th><th>Status</th></tr></thead><tbody>'+
+    rows.map(b=>{
+      const st=statusOf(b.status);
+      const click = clickable!==false? 'onclick="editBewerber(\''+b.id+'\')"':'';
+      return '<tr '+click+'><td><b>'+esc(b.name)+'</b></td>'+
+        '<td class="hide-sm muted">'+esc(b.email||'')+(b.telefon?'<br>'+esc(b.telefon):'')+'</td>'+
+        (showCust?'<td>'+(b.customer_id?esc(cust(b.customer_id)?.name||'?'):'<span class="tag-s gold">offen</span>')+'</td>':'')+
+        '<td><span class="tag-s gray">'+esc(b.quelle||'manuell')+'</span></td>'+
+        '<td><span class="tag-s '+st.c+'">'+esc(st.label)+'</span></td></tr>';
+    }).join('')+'</tbody></table>';
+}
+function editBewerber(id){
+  const b=id? state.bewerber.find(x=>x.id===id):{name:'',email:'',telefon:'',quelle:'manuell',status:'neu',customer_id:'',stellenanzeige_id:'',notizen:''};
+  const custOpts='<option value="">\u2014 nicht zugeordnet</option>'+state.customers.map(c=>'<option value="'+c.id+'"'+(c.id===b.customer_id?' selected':'')+'>'+esc(c.name)+'</option>').join('');
+  const quelleOpts=QUELLE.map(o=>'<option'+(o===b.quelle?' selected':'')+'>'+o+'</option>').join('');
+  const statusOpts=STATUS.map(o=>'<option value="'+o.id+'"'+(o.id===b.status?' selected':'')+'>'+o.label+'</option>').join('');
+  openModal({
+    title:id?'Bewerber bearbeiten':'Neuer Bewerber',
+    body:
+      '<div class="frow"><label>Name *</label><input id="b-name" value="'+esc(b.name)+'"></div>'+
+      '<div class="frow2"><div class="frow"><label>E-Mail</label><input id="b-email" value="'+esc(b.email||'')+'"></div>'+
+      '<div class="frow"><label>Telefon</label><input id="b-tel" value="'+esc(b.telefon||'')+'"></div></div>'+
+      '<div class="frow2"><div class="frow"><label>Quelle</label><select id="b-quelle">'+quelleOpts+'</select></div>'+
+      '<div class="frow"><label>Status</label><select id="b-status">'+statusOpts+'</select></div></div>'+
+      '<div class="frow"><label>Kunde (Zuordnung)</label><select id="b-cust" onchange="bStelleSync()">'+custOpts+'</select></div>'+
+      '<div class="frow"><label>Stelle</label><select id="b-stelle"></select></div>'+
+      '<div class="frow"><label>Notizen</label><textarea id="b-notiz">'+esc(b.notizen||'')+'</textarea></div>',
+    footer:(id?'<button class="btn danger sm" onclick="deleteBewerber(\''+id+'\')">Loeschen</button>':'')+
+      '<div class="spacer"></div><button class="btn ghost" onclick="closeModal()">Abbrechen</button>'+
+      '<button class="btn" onclick="saveBewerber('+(id?"'"+id+"'":'null')+')">Speichern</button>'
+  });
+  bStelleSync(b.stellenanzeige_id);
+}
+function bStelleSync(selId){
+  const cid=$('#b-cust').value;
+  const opts=state.stellen.filter(s=>s.customer_id===cid);
+  $('#b-stelle').innerHTML='<option value="">\u2014 keine Stelle</option>'+opts.map(s=>'<option value="'+s.id+'"'+(s.id===selId?' selected':'')+'>'+esc(s.titel)+'</option>').join('');
+}
+async function saveBewerber(id){
+  const name=$('#b-name').value.trim(); if(!name){toast('Name fehlt');return;}
+  const payload={name,email:$('#b-email').value.trim(),telefon:$('#b-tel').value.trim(),
+    quelle:$('#b-quelle').value,status:$('#b-status').value,
+    customer_id:$('#b-cust').value||null,stellenanzeige_id:$('#b-stelle').value||null,notizen:$('#b-notiz').value.trim()};
+  let res= id? await sb.from('bewerber').update(payload).eq('id',id) : await sb.from('bewerber').insert(payload);
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  await reload('bewerber'); closeModal(); render(); toast(id?'Bewerber gespeichert':'Bewerber angelegt');
+}
+async function deleteBewerber(id){
+  if(!confirm('Bewerber loeschen?'))return;
+  const res=await sb.from('bewerber').delete().eq('id',id);
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  await reload('bewerber'); closeModal(); render(); toast('Bewerber geloescht');
+}
+
+/* ===================== CSV-IMPORT ===================== */
+let CSV={rows:[],headers:[],map:{}};
+function openCsvImport(){
+  openModal({
+    title:'Bewerber-CSV importieren', wide:true,
+    body:
+      '<div class="frow"><label>CSV-Datei</label><input type="file" id="csv-file" accept=".csv,text/csv" onchange="csvFile(event)"></div>'+
+      '<div class="hint">Oder Inhalt direkt einfuegen:</div>'+
+      '<div class="frow"><textarea id="csv-text" placeholder="name,email,telefon,quelle" oninput="csvParse(this.value)"></textarea></div>'+
+      '<div id="csv-preview"></div>',
+    footer:'<div class="spacer"></div><button class="btn ghost" onclick="closeModal()">Abbrechen</button>'+
+      '<button class="btn" id="csv-go" onclick="csvImport()" disabled>Importieren</button>'
+  });
+}
+function csvFile(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{$('#csv-text').value=r.result;csvParse(r.result);};r.readAsText(f);}
+function csvParse(text){
+  text=(text||'').trim(); const prev=$('#csv-preview'); if(!text){if(prev)prev.innerHTML='';CSV={rows:[],headers:[],map:{}};$('#csv-go').disabled=true;return;}
+  const sep = text.split('\n')[0].includes(';')?';':',';
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  const split=l=>{const out=[];let cur='',q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(q){if(ch==='"'){if(l[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=ch;}else{if(ch==='"')q=true;else if(ch===sep){out.push(cur);cur='';}else cur+=ch;}}out.push(cur);return out.map(x=>x.trim());};
+  const headers=split(lines[0]);
+  const rows=lines.slice(1).map(l=>split(l));
+  CSV={headers,rows,map:autoMap(headers)};
+  renderCsvPreview();
+}
+function autoMap(headers){
+  const m={name:'',email:'',telefon:'',quelle:''};
+  headers.forEach((h,i)=>{const l=h.toLowerCase();
+    if(!m.name&&/(name|vorname|nachname|bewerber)/.test(l))m.name=i;
+    if(!m.email&&/(mail|e-mail|email)/.test(l))m.email=i;
+    if(!m.telefon&&/(tel|phone|handy|mobil|nummer)/.test(l))m.telefon=i;
+    if(!m.quelle&&/(quelle|source|kanal)/.test(l))m.quelle=i;
+  });
+  return m;
+}
+function renderCsvPreview(){
+  const fields=[['name','Name *'],['email','E-Mail'],['telefon','Telefon'],['quelle','Quelle']];
+  const opt=sel=>'<option value="">\u2014</option>'+CSV.headers.map((h,i)=>'<option value="'+i+'"'+(String(sel)===String(i)?' selected':'')+'>'+esc(h)+'</option>').join('');
+  const custOpts='<option value="">\u2014 spaeter zuordnen</option>'+state.customers.map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join('');
+  $('#csv-preview').innerHTML=
+    '<div class="divider"></div><div class="sec-title">Spalten zuordnen</div>'+
+    fields.map(f=>'<div class="maprow"><div class="col">'+f[1]+'</div><select onchange="CSV.map.'+f[0]+'=this.value">'+opt(CSV.map[f[0]])+'</select></div>').join('')+
+    '<div class="frow" style="margin-top:6px"><label>Alle diesem Kunden zuordnen (optional)</label><select id="csv-cust">'+custOpts+'</select></div>'+
+    '<div class="sec-title" style="margin-top:6px">Vorschau ('+CSV.rows.length+' Zeilen)</div>'+
+    '<div class="csvtable"><table><thead><tr>'+CSV.headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+
+      CSV.rows.slice(0,5).map(r=>'<tr>'+r.map(c=>'<td>'+esc(c)+'</td>').join('')+'</tr>').join('')+
+    '</tbody></table></div>';
+  $('#csv-go').disabled = CSV.map.name===''||CSV.map.name==null;
+}
+async function csvImport(){
+  if(CSV.map.name===''||CSV.map.name==null){toast('Spalte "Name" zuordnen');return;}
+  const cid=$('#csv-cust')?.value||null;
+  const get=(r,k)=> (CSV.map[k]!==''&&CSV.map[k]!=null)? (r[CSV.map[k]]||'').trim() : '';
+  const payload=CSV.rows.map(r=>({
+    name:get(r,'name'), email:get(r,'email'), telefon:get(r,'telefon'),
+    quelle: get(r,'quelle')&&QUELLE.includes(get(r,'quelle').toLowerCase())? get(r,'quelle').toLowerCase() : 'csv',
+    status:'neu', customer_id:cid||null
+  })).filter(p=>p.name);
+  if(!payload.length){toast('Keine gueltigen Zeilen');return;}
+  $('#csv-go').disabled=true; $('#csv-go').textContent='Importiere...';
+  const res=await sb.from('bewerber').insert(payload);
+  if(res.error){toast('Fehler: '+res.error.message);$('#csv-go').disabled=false;$('#csv-go').textContent='Importieren';return;}
+  await reload('bewerber'); closeModal(); render(); toast(payload.length+' Bewerber importiert');
+}
+
+/* ===================== MATCHING ===================== */
+function viewMatching(){
+  const open=state.bewerber.filter(b=>!b.customer_id);
+  const custOpts='<option value="all">Alle Kunden</option>'+state.customers.map(c=>'<option value="'+c.id+'"'+(state.filterCustomer===c.id?' selected':'')+'>'+esc(c.name)+'</option>').join('');
+  $('#content').innerHTML=
+    '<div class="card" style="padding:16px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'+
+      '<b>'+open.length+' Bewerber</b> ohne Zuordnung. Weise sie hier einem Kunden + Stelle zu.'+
+    '</div>'+
+    '<div class="card tablecard">'+
+    (open.length?
+      '<table><thead><tr><th>Bewerber</th><th class="hide-sm">Quelle</th><th>Kunde</th><th>Stelle</th><th></th></tr></thead><tbody>'+
+      open.map(b=>'<tr style="cursor:default">'+
+        '<td><b>'+esc(b.name)+'</b><div class="muted" style="font-size:12px">'+esc(b.email||'')+'</div></td>'+
+        '<td class="hide-sm"><span class="tag-s gray">'+esc(b.quelle||'')+'</span></td>'+
+        '<td><select id="m-c-'+b.id+'" onchange="mStelle(\''+b.id+'\')" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px"><option value="">waehlen...</option>'+
+          state.customers.map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join('')+'</select></td>'+
+        '<td><select id="m-s-'+b.id+'" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px"><option value="">\u2014</option></select></td>'+
+        '<td class="right"><button class="btn sm" onclick="mAssign(\''+b.id+'\')">Zuordnen</button></td></tr>'
+      ).join('')+'</tbody></table>'
+      : empty('\u2705','Alles zugeordnet','Keine offenen Bewerber.'))+
+    '</div>'+
+    '<div style="height:22px"></div>'+
+    '<div class="toolbar"><div class="sec-title" style="margin:0">Zugeordnete Bewerber</div><div style="flex:1"></div>'+
+      '<select onchange="state.filterCustomer=this.value;render()" style="padding:8px 11px;border:1px solid var(--line);border-radius:9px">'+custOpts+'</select></div>'+
+    '<div class="card tablecard">'+
+      tableBewerber(state.bewerber.filter(b=>b.customer_id&&(state.filterCustomer==='all'||b.customer_id===state.filterCustomer)),true)+
+    '</div>';
+}
+function mStelle(bid){
+  const cid=$('#m-c-'+bid).value;
+  const opts=state.stellen.filter(s=>s.customer_id===cid);
+  $('#m-s-'+bid).innerHTML='<option value="">\u2014 keine Stelle</option>'+opts.map(s=>'<option value="'+s.id+'">'+esc(s.titel)+'</option>').join('');
+}
+async function mAssign(bid){
+  const cid=$('#m-c-'+bid).value; if(!cid){toast('Kunde waehlen');return;}
+  const sid=$('#m-s-'+bid).value||null;
+  const res=await sb.from('bewerber').update({customer_id:cid,stellenanzeige_id:sid,status:'gesichtet'}).eq('id',bid);
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  await reload('bewerber'); render(); toast('Bewerber zugeordnet');
+}
+
+/* ===================== UI PRIMITIVES ===================== */
+function toolbar(ph){
+  return '<div class="toolbar"><div class="search"><span class="si">\u2315</span>'+
+    '<input placeholder="'+esc(ph)+'" value="'+esc(state.search)+'" oninput="state.search=this.value;render()" autofocus></div></div>';
+}
+function empty(ic,t,s){return '<div class="empty"><div class="big">'+ic+'</div><b>'+esc(t)+'</b><div class="muted" style="margin-top:4px">'+esc(s)+'</div></div>';}
+function openModal({title,body,footer,wide}){
+  $('#modalRoot').innerHTML='<div class="modal-bg" onclick="if(event.target===this)closeModal()">'+
+    '<div class="modal'+(wide?' wide':'')+'"><div class="modal-h"><h3>'+esc(title)+'</h3><button class="x" onclick="closeModal()">\u00D7</button></div>'+
+    '<div class="modal-b">'+body+'</div><div class="modal-f">'+(footer||'')+'</div></div></div>';
+}
+function closeModal(){ $('#modalRoot').innerHTML=''; }
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+init();
+</script>
+</body>
+</html>
