@@ -365,6 +365,7 @@ async function afterLogin(){
   state.profile=prof;
   $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
   $('#who').innerHTML='<b>'+esc(prof.name||prof.email)+'</b><small>GC-Admin · Vollzugriff</small>';
+  $('#content').innerHTML='<div class="empty"><div class="big">\u25CC</div><b>Daten werden geladen\u2026</b></div>';
   await loadAll();
   setView('dashboard');
 }
@@ -610,7 +611,11 @@ async function toggleModule(id,mod,on){
   if(res.error){toast('Fehler: '+res.error.message);return;}
   await reload('customers'); toast((on?'Freigeschaltet: ':'Gesperrt: ')+mod);
 }
-function loginAsCustomer(id){ toast('Kunden-OS-Vorschau kommt mit der API-Welle'); }
+function loginAsCustomer(id){
+  const c=cust(id);
+  toast('Kunden-OS wird ge\u00f6ffnet'+(c?' \u2013 '+c.name:''));
+  window.open('https://os.green-careers.de/','_blank','noopener');
+}
 
 /* ---- Logins / Provisioning ---- */
 function createLoginModal(cid){
