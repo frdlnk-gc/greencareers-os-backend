@@ -130,6 +130,10 @@ tbody tr:hover{background:var(--soft)}
 .maprow .col{font-size:13px;font-weight:600;background:var(--line-2);padding:7px 10px;border-radius:8px;min-width:0}
 .maprow.off{opacity:.5}
 .maprow select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.maprow.ask{background:#fff8e6;border:1px solid #f3d27a;border-radius:10px;padding:8px;margin-left:-8px;margin-right:-8px}
+.mapbadge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;margin-top:4px}
+.mapbadge.ok{background:#e6f4ea;color:#1a7f37}
+.mapbadge.ask{background:#fcefc7;color:#9a6700}
 .extragrid{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13.5px}
 .extra-k{color:var(--muted);font-weight:600}
 .extra-v{color:var(--text);word-break:break-word}
@@ -279,7 +283,8 @@ const STATUS = [
   {id:'eingestellt',label:'Eingestellt',c:'green'},
   {id:'abgesagt',label:'Abgesagt',c:'red'}
 ];
-const QUELLE = ['indeed','meta','manuell','csv','website'];
+const QUELLE = ['indeed','meta','gehaltscheck','manuell','csv','website'];
+const QUELLE_LABEL = {indeed:'Indeed',meta:'Meta Ads',gehaltscheck:'Gehaltscheck',website:'Website',manuell:'Manuell',csv:'CSV-Import'};
 const THEME_TAG = {galabau:'green',tiefbau:'orange',landwirtschaft:'gold'};
 const MODULES = [
   {id:'heute',  label:'Heute',    desc:'Tages-Cockpit, Wetter, Stempeluhr'},
@@ -932,15 +937,25 @@ async function deleteBewerber(id){
 /* ===================== CSV-IMPORT (flexibel: alle Spalten waehlbar) ===================== */
 // Zielfelder. 'extra' = als Zusatzinfo im JSONB-Feld speichern (Spaltenname = Schluessel).
 const CSV_TARGETS=[
-  {v:'skip',  l:'\u2014 nicht importieren'},
-  {v:'name',  l:'Name *'},
-  {v:'email', l:'E-Mail'},
-  {v:'telefon',l:'Telefon'},
-  {v:'quelle',l:'Quelle'},
-  {v:'status',l:'Status'},
-  {v:'extra', l:'Als Zusatzinfo speichern'}
+  {v:'skip',    l:'\u2014 nicht importieren'},
+  {v:'name',    l:'Name (komplett) *'},
+  {v:'vorname', l:'Vorname *'},
+  {v:'nachname',l:'Nachname *'},
+  {v:'email',   l:'E-Mail'},
+  {v:'telefon', l:'Telefon'},
+  {v:'position',l:'Position / gesuchte Stelle'},
+  {v:'ort',     l:'Ort'},
+  {v:'plz',     l:'PLZ'},
+  {v:'erfahrung',l:'Berufserfahrung'},
+  {v:'quelle',  l:'Quelle'},
+  {v:'status',  l:'Status'},
+  {v:'extra',   l:'Als Zusatzinfo speichern'}
 ];
-let CSV={rows:[],headers:[],cols:[]}; // cols[i] = Zielfeld pro Spalte
+// Semantische Felder, die als saubere Schluessel ins JSONB "extra" wandern.
+const CSV_EXTRA_KEYS={position:'Position',ort:'Ort',plz:'PLZ',erfahrung:'Berufserfahrung'};
+// Felder, die nur einmal vergeben werden duerfen.
+const CSV_UNIQUE=['name','vorname','nachname','email','telefon','position','ort','plz','erfahrung','quelle','status'];
+let CSV={rows:[],headers:[],cols:[],conf:[]}; // cols[i]=Zielfeld, conf[i]='high'|'low' pro Spalte
 function openCsvImport(){
   openModal({
     title:'Bewerber importieren', wide:true,
@@ -956,66 +971,98 @@ function openCsvImport(){
 function csvFile(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{$('#csv-text').value=r.result;csvParse(r.result);};r.readAsText(f);}
 function csvParse(text){
   text=(text||'').replace(/\s+$/,''); const prev=$('#csv-preview');
-  if(!text){if(prev)prev.innerHTML='';CSV={rows:[],headers:[],cols:[]};$('#csv-go').disabled=true;return;}
+  if(!text){if(prev)prev.innerHTML='';CSV={rows:[],headers:[],cols:[],conf:[]};$('#csv-go').disabled=true;return;}
   const first=text.split('\n')[0];
   const sep = first.includes('\t')?'\t':first.includes(';')?';':',';
   const lines=text.split(/\r?\n/).filter(l=>l.trim());
   const split=l=>{const out=[];let cur='',q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(q){if(ch==='"'){if(l[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=ch;}else{if(ch==='"')q=true;else if(ch===sep){out.push(cur);cur='';}else cur+=ch;}}out.push(cur);return out.map(x=>x.trim());};
   const headers=split(lines[0]);
   const rows=lines.slice(1).map(l=>split(l));
-  CSV={headers,rows,cols:autoMap(headers)};
+  const m=autoMap(headers);
+  CSV={headers,rows,cols:m.cols,conf:m.conf};
   renderCsvPreview();
 }
-// Liefert pro Spalte das Default-Ziel.
+// Liefert pro Spalte Default-Ziel + Konfidenz ('high'=sicher erkannt, 'low'=bitte pruefen).
 function autoMap(headers){
-  let nameUsed=false,mailUsed=false,telUsed=false,quUsed=false,stUsed=false;
-  return headers.map(h=>{
-    const l=h.toLowerCase();
-    if(!nameUsed&&/(full_?name|^name$|vor.?name|nach.?name|bewerber)/.test(l)){nameUsed=true;return 'name';}
-    if(!mailUsed&&/(e-?mail|email)/.test(l)){mailUsed=true;return 'email';}
-    if(!telUsed&&/(phone|telefon|handy|mobil|rufnummer|number)/.test(l)){telUsed=true;return 'telefon';}
-    if(!quUsed&&/(platform|quelle|source|kanal)/.test(l)){quUsed=true;return 'quelle';}
-    if(!stUsed&&/(lead_?status|^status$)/.test(l)){stUsed=true;return 'status';}
-    // technische Meta-Felder standardmaessig nicht importieren
-    if(/(^id$|_id$|created_time|is_organic|ad_name|adset|campaign_id|form_id)/.test(l)) return 'skip';
-    return 'extra';
+  const used={};
+  const cols=[],conf=[];
+  headers.forEach(h=>{
+    // Spaltenname normalisieren: Sonderzeichen -> Leerzeichen
+    const l=h.toLowerCase().replace(/[?_]/g,' ').replace(/\s+/g,' ').trim();
+    let t='extra',c='low';
+    if(!used.name && /\bfull ?name\b|^name$|bewerbername|^bewerber$/.test(l)){t='name';c='high';}
+    else if(!used.vorname && /vor ?name/.test(l)){t='vorname';c='high';}
+    else if(!used.nachname && /nach ?name/.test(l)){t='nachname';c='high';}
+    else if(!used.email && /e-?mail/.test(l)){t='email';c='high';}
+    else if(!used.telefon && /(phone|telefon|handy|mobil|rufnummer|\bnumber\b)/.test(l)){t='telefon';c='high';}
+    else if(!used.ort && /wo suchst/.test(l)){t='ort';c='low';}   // "wo suchst du... (ort oder plz)" -> mehrdeutig, vor PLZ pruefen
+    else if(!used.plz && /(plz|postleitzahl)/.test(l)){t='plz';c='high';}
+    else if(!used.ort && /(^ort$|\bort\b|wohnort|stadt|standort)/.test(l)){t='ort';c='high';}
+    else if(!used.position && /(interessant|gesuchte stelle|stellenwunsch)/.test(l)){t='position';c='high';}
+    else if(!used.position && /(position|^stelle$|stellen)/.test(l)){t='position';c='high';}
+    else if(!used.position && /fachrichtung/.test(l)){t='position';c='low';} // Kategorie, nicht exakte Rolle -> pruefen
+    else if(!used.erfahrung && /(berufserfahrung|erfahrung)/.test(l)){t='erfahrung';c='low';} // Inhalt variiert je Quelle -> pruefen
+    else if(!used.quelle && /(platform|quelle|^source$)/.test(l)){t='quelle';c='high';}
+    else if(!used.status && /(lead ?status|^status$)/.test(l)){t='status';c='high';}
+    // technische Meta-/Form-Felder standardmaessig nicht importieren
+    else if(/(^id$| id$|created time|is organic|ad name|adset|campaign|form id|form name|zeitstempel)/.test(l)){t='skip';c='high';}
+    else {t='extra';c='low';}
+    if(CSV_UNIQUE.includes(t)) used[t]=true;
+    cols.push(t); conf.push(c);
   });
+  return {cols,conf};
 }
 function csvSet(i,v){
-  // Name/E-Mail/Telefon/Quelle/Status sind 1x vergeben -> bei Doppelung andere zuruecksetzen
-  if(['name','email','telefon','quelle','status'].includes(v)){
+  // Unique-Felder sind 1x vergeben -> bei Doppelung andere zuruecksetzen
+  if(CSV_UNIQUE.includes(v)){
     CSV.cols=CSV.cols.map((c,idx)=> (idx!==i && c===v)? 'extra' : c);
   }
-  CSV.cols[i]=v; renderCsvPreview();
+  CSV.cols[i]=v; CSV.conf[i]='high'; // manuell gesetzt = bestaetigt
+  renderCsvPreview();
 }
 function renderCsvPreview(){
-  const custOpts='<option value="">\u2014 spaeter zuordnen</option>'+state.customers.map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join('');
+  const prevC=$('#csv-cust')?.value||'';
+  const custOpts='<option value="">\u2014 spaeter zuordnen</option>'+state.customers.map(c=>'<option value="'+c.id+'"'+(String(c.id)===prevC?' selected':'')+'>'+esc(c.name)+'</option>').join('');
+  const prevQ=$('#csv-quelle')?.value||'';
+  const quOpts='<option value="">\u2014 aus Spalte / automatisch</option>'+QUELLE.map(q=>'<option value="'+q+'"'+(q===prevQ?' selected':'')+'>'+(QUELLE_LABEL[q]||q)+'</option>').join('');
   const nImp=CSV.cols.filter(c=>c!=='skip').length;
-  const hasName=CSV.cols.includes('name');
+  const hasName=CSV.cols.includes('name')||(CSV.cols.includes('vorname')&&CSV.cols.includes('nachname'));
+  const nAsk=CSV.cols.filter((c,i)=>c!=='skip'&&CSV.conf[i]==='low').length;
   const rowsHtml=CSV.headers.map((h,i)=>{
     const sample=(CSV.rows.find(r=>(r[i]||'').trim())||[])[i]||'';
     const sel=CSV.cols[i];
+    const ask=sel!=='skip'&&CSV.conf[i]==='low';
     const opts=CSV_TARGETS.map(t=>'<option value="'+t.v+'"'+(t.v===sel?' selected':'')+'>'+t.l+'</option>').join('');
-    return '<div class="maprow'+(sel==='skip'?' off':'')+'">'+
-      '<div class="col"><b>'+esc(h)+'</b><div class="muted" style="font-size:11.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(sample)+'</div></div>'+
+    const badge = sel==='skip' ? ''
+      : ask ? '<span class="mapbadge ask">? bitte pruefen</span>'
+            : '<span class="mapbadge ok">\u2713 erkannt</span>';
+    return '<div class="maprow'+(sel==='skip'?' off':'')+(ask?' ask':'')+'">'+
+      '<div class="col"><b>'+esc(h)+'</b><div class="muted" style="font-size:11.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(sample)+'</div>'+badge+'</div>'+
       '<select onchange="csvSet('+i+',this.value)">'+opts+'</select></div>';
   }).join('');
   $('#csv-preview').innerHTML=
     '<div class="divider"></div>'+
     '<div class="sec-title">Spalten zuordnen <span class="muted" style="text-transform:none;font-weight:500">('+nImp+' von '+CSV.headers.length+' aktiv \u00B7 '+CSV.rows.length+' Zeilen)</span></div>'+
-    '<div class="hint" style="margin-bottom:10px">Pro Spalte waehlen: Standardfeld, "Zusatzinfo" (bleibt am Bewerber gespeichert) oder "nicht importieren".</div>'+
+    (nAsk?'<div class="hint" style="background:#fff8e6;border:1px solid #f3d27a;border-radius:8px;padding:8px 10px;margin-bottom:10px;color:#9a6700"><b>'+nAsk+' Spalte'+(nAsk>1?'n':'')+' unklar.</b> Gelb markierte Spalten bitte pruefen \u2013 stimmt die Zuordnung?</div>':'')+
+    '<div class="hint" style="margin-bottom:10px">Pro Spalte waehlen: Standardfeld, "Zusatzinfo" (bleibt am Bewerber gespeichert) oder "nicht importieren". Vorname + Nachname werden automatisch zu einem Namen zusammengefuegt.</div>'+
     rowsHtml+
-    '<div class="frow" style="margin-top:14px"><label>Alle diesem Kunden zuordnen (optional)</label><select id="csv-cust">'+custOpts+'</select></div>'+
-    (hasName?'':'<div class="hint" style="color:var(--danger)">Mindestens eine Spalte muss "Name" sein.</div>');
+    '<div class="frow" style="margin-top:14px"><label>Quelle fuer alle Zeilen</label><select id="csv-quelle" onchange="renderCsvPreview()">'+quOpts+'</select></div>'+
+    '<div class="hint" style="margin-top:-6px;margin-bottom:10px">Bei Indeed/Meta gibt es oft keine brauchbare Quelle-Spalte \u2013 hier fuer den ganzen Import festlegen.</div>'+
+    '<div class="frow"><label>Alle diesem Kunden zuordnen (optional)</label><select id="csv-cust">'+custOpts+'</select></div>'+
+    (hasName?'':'<div class="hint" style="color:var(--danger)">Mindestens "Name" \u2013 oder "Vorname" + "Nachname" \u2013 muss zugeordnet sein.</div>');
   $('#csv-go').disabled = !hasName;
 }
 function normQuelle(v){
   const l=(v||'').toLowerCase();
+  if(/gehaltscheck|gehalts-?check/.test(l))return 'gehaltscheck';
   if(/ig|insta|fb|face|meta/.test(l))return 'meta';
   if(/indeed/.test(l))return 'indeed';
   if(/web/.test(l))return 'website';
   if(QUELLE.includes(l))return l;
   return 'csv';
+}
+function cleanPhone(v){
+  return (v||'').replace(/^p:/i,'').replace(/[^\d+ ()/-]/g,'').replace(/\s+/g,' ').trim();
 }
 function normStatus(v){
   const l=(v||'').toLowerCase();
@@ -1023,18 +1070,25 @@ function normStatus(v){
   return hit?hit.id:'neu';
 }
 async function csvImport(){
-  if(!CSV.cols.includes('name')){toast('Spalte "Name" zuordnen');return;}
+  const hasName=CSV.cols.includes('name')||(CSV.cols.includes('vorname')&&CSV.cols.includes('nachname'));
+  if(!hasName){toast('Spalte "Name" (oder Vorname + Nachname) zuordnen');return;}
   const cid=$('#csv-cust')?.value||null;
+  const quOver=$('#csv-quelle')?.value||'';
   const idx=t=>CSV.cols.indexOf(t);
   const payload=CSV.rows.map(r=>{
     const cell=t=>{const k=idx(t);return k>=0?(r[k]||'').trim():'';};
+    // Name: komplett oder aus Vorname + Nachname
+    const name = idx('name')>=0 ? cell('name') : [cell('vorname'),cell('nachname')].filter(Boolean).join(' ').trim();
     const extra={};
+    // freie Zusatz-Spalten
     CSV.cols.forEach((c,i)=>{ if(c==='extra'){ const val=(r[i]||'').trim(); if(val) extra[CSV.headers[i]]=val; } });
+    // semantische Felder unter sauberen Schluesseln
+    Object.keys(CSV_EXTRA_KEYS).forEach(t=>{ const v=cell(t); if(v) extra[CSV_EXTRA_KEYS[t]]=v; });
     return {
-      name:cell('name'),
+      name,
       email:cell('email')||null,
-      telefon:cell('telefon')||null,
-      quelle: idx('quelle')>=0? normQuelle(cell('quelle')) : 'csv',
+      telefon: cleanPhone(cell('telefon'))||null,
+      quelle: quOver ? quOver : (idx('quelle')>=0? normQuelle(cell('quelle')) : 'csv'),
       status: idx('status')>=0? normStatus(cell('status')) : 'neu',
       customer_id:cid||null,
       extra
