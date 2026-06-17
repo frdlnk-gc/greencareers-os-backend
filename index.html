@@ -351,6 +351,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 const state = {
   profile:null, view:'dashboard',
   customers:[], stellen:[], bewerber:[], branchen:[], tickets:[], activity:[], users:[],
+  zuordnungen:[], zuordLoaded:false,
   search:'', filterCustomer:'all', selCustomer:null, bewView:'tabelle'
 };
 const STATUS = [
@@ -424,6 +425,46 @@ const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':
 const cust = id => state.customers.find(c=>c.id===id);
 const stelleById = id => state.stellen.find(s=>s.id===id);
 const statusOf = id => STATUS.find(s=>s.id===id) || {label:id,c:'gray'};
+
+/* ---- Bewerber-Zuordnung (Many-to-Many) Helfer ----
+   Quelle der Wahrheit = state.zuordnungen (Join-Tabelle bewerber_zuordnung).
+   Fallback auf legacy bewerber.customer_id, solange v8 nicht gelaufen ist
+   ODER fuer Website-Bewerbungen (apply_to_job setzt nur customer_id). */
+function asgRows(bid){            // alle Zuordnungs-Zeilen eines Bewerbers
+  return state.zuordLoaded ? state.zuordnungen.filter(z=>z.bewerber_id===bid) : [];
+}
+function bewIsAssigned(b){        // hat der Bewerber mind. eine Zuordnung?
+  if(b.customer_id) return true;
+  return state.zuordLoaded && state.zuordnungen.some(z=>z.bewerber_id===b.id);
+}
+function bewCustomerIds(b){       // alle Kunden-IDs eines Bewerbers (legacy + join)
+  const s=new Set();
+  if(b.customer_id) s.add(b.customer_id);
+  if(state.zuordLoaded) state.zuordnungen.forEach(z=>{ if(z.bewerber_id===b.id) s.add(z.customer_id); });
+  return [...s];
+}
+function bewIdsForCustomer(cid){  // alle Bewerber-IDs, die diesem Kunden zugeordnet sind
+  const s=new Set();
+  state.bewerber.forEach(b=>{ if(b.customer_id===cid) s.add(b.id); });
+  if(state.zuordLoaded) state.zuordnungen.forEach(z=>{ if(z.customer_id===cid) s.add(z.bewerber_id); });
+  return s;
+}
+function bewForCustomer(cid){     // Bewerber-Objekte fuer einen Kunden
+  const ids=bewIdsForCustomer(cid);
+  return state.bewerber.filter(b=>ids.has(b.id));
+}
+function bewCountForStelle(sid){  // Anzahl Bewerber auf einer Stelle (legacy + join)
+  const s=new Set();
+  state.bewerber.forEach(b=>{ if(b.stellenanzeige_id===sid) s.add(b.id); });
+  if(state.zuordLoaded) state.zuordnungen.forEach(z=>{ if(z.stellenanzeige_id===sid) s.add(z.bewerber_id); });
+  return s.size;
+}
+function custCellTxt(b){          // Anzeige der Kunden-Zuordnung(en) eines Bewerbers
+  const ids=bewCustomerIds(b);
+  if(!ids.length) return '<span class="tag-s gold">offen</span>';
+  const first=esc(cust(ids[0])?.name||'?');
+  return first+(ids.length>1?' <span class="tag-s blue" title="Mehrfach zugeordnet">+'+(ids.length-1)+'</span>':'');
+}
 function toast(msg){const r=$('#toastRoot');r.innerHTML='<div class="toast">'+esc(msg)+'</div>';setTimeout(()=>r.innerHTML='',2200);}
 function fmtDate(d){if(!d)return '';const x=new Date(d);return x.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});}
 function fmtEUR(n){return (Number(n)||0).toLocaleString('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0});}
@@ -547,11 +588,17 @@ async function loadAll(){
   state.customers = c.data||[]; state.stellen = s.data||[];
   state.bewerber = b.data||[]; state.branchen = br.data||[];
   state.tickets = tk.data||[]; state.activity = ac.data||[]; state.users = pr.data||[];
+  // Join-Tabelle defensiv laden: falls v8 noch nicht gelaufen ist (Tabelle fehlt),
+  // bleibt zuordLoaded=false und alles faellt sauber auf legacy customer_id zurueck.
+  const z=await sb.from('bewerber_zuordnung').select('*');
+  if(z.error){ state.zuordnungen=[]; state.zuordLoaded=false; }
+  else { state.zuordnungen=z.data||[]; state.zuordLoaded=true; }
 }
 async function reload(table){
   if(table==='customers'){const {data}=await sb.from('customers').select('*').order('name');state.customers=data||[];}
   if(table==='stellen'){const {data}=await sb.from('stellenanzeigen').select('*').order('created_at',{ascending:false});state.stellen=data||[];}
   if(table==='bewerber'){const {data}=await sb.from('bewerber').select('*').order('created_at',{ascending:false});state.bewerber=data||[];}
+  if(table==='zuordnungen'){const z=await sb.from('bewerber_zuordnung').select('*');if(!z.error){state.zuordnungen=z.data||[];state.zuordLoaded=true;}}
   if(table==='tickets'){const {data}=await sb.from('support_tickets').select('*').order('created_at',{ascending:false});state.tickets=data||[];}
   if(table==='activity'){const {data}=await sb.from('activity_log').select('*').order('created_at',{ascending:false});state.activity=data||[];}
   if(table==='users'){const {data}=await sb.from('profiles').select('*').order('created_at',{ascending:false});state.users=data||[];}
@@ -612,7 +659,7 @@ function render(){
 /* ===================== DASHBOARD ===================== */
 function viewDashboard(){
   const offen = state.stellen.filter(s=>s.status==='aktiv').length;
-  const unassigned = state.bewerber.filter(b=>!b.customer_id).length;
+  const unassigned = state.bewerber.filter(b=>!bewIsAssigned(b)).length;
   const mrr = state.customers.filter(c=>c.abo_status==='aktiv').reduce((a,c)=>a+(Number(c.mrr)||0),0);
   const openT = state.tickets.filter(t=>t.status!=='geloest').length;
   const onbCounts = KUNDENSTATUS.map(o=>({...o,n:state.customers.filter(c=>(c.onboarding_status||'neu')===o.v).length}));
@@ -636,7 +683,7 @@ function viewDashboard(){
         '<div style="flex:1"></div>'+
         '<button class="btn sm" onclick="setView(\'matching\')">Zuordnen \u2192</button>'+
       '</div>'+
-      tableBewerber(state.bewerber.filter(b=>!b.customer_id).slice(0,6), true)+
+      tableBewerber(state.bewerber.filter(b=>!bewIsAssigned(b)).slice(0,6), true)+
     '</div>'+
     '<div class="card tablecard">'+
       '<div style="padding:16px 18px;border-bottom:1px solid var(--line)"><b>Neueste Bewerber</b></div>'+
@@ -655,7 +702,7 @@ function viewKunden(){
     '<div class="card tablecard">'+
     (rows.length? '<table><thead><tr><th>Betrieb</th><th class="hide-sm">Branchen</th><th>Abo</th><th>Status</th><th class="right">Bewerber</th></tr></thead><tbody>'+
       rows.map(c=>{
-        const nb=state.bewerber.filter(b=>b.customer_id===c.id).length;
+        const nb=bewIdsForCustomer(c.id).size;
         const pl=lookup(PLANS,c.plan||'free'), ab=lookup(ABO_STATUS,c.abo_status||'aktiv'), on=lookup(KUNDENSTATUS,c.onboarding_status||'neu');
         return '<tr onclick="openCustomer(\''+c.id+'\')">'+
           '<td><b>'+esc(c.name)+'</b><div class="muted" style="font-size:12px">'+esc(c.ort||'')+'</div></td>'+
@@ -678,7 +725,7 @@ function viewKundeDetail(){
   $('#pgActions').innerHTML='<button class="btn ghost" onclick="loginAsCustomer(\''+c.id+'\')">Kunden-OS ansehen</button> <button class="btn" onclick="editCustomer(\''+c.id+'\')">Stammdaten bearbeiten</button>';
   const mods=Object.assign(defaultModules(),c.modules||{});
   const ns=state.stellen.filter(s=>s.customer_id===c.id);
-  const nb=state.bewerber.filter(b=>b.customer_id===c.id);
+  const nb=bewForCustomer(c.id);
   const logins=state.users.filter(u=>u.customer_id===c.id);
   const tickets=state.tickets.filter(t=>t.customer_id===c.id);
   const acts=state.activity.filter(a=>a.customer_id===c.id);
@@ -759,7 +806,7 @@ function viewKundeDetail(){
     // STELLEN & BEWERBER SUMMARY
     '<div class="grid2">'+
       '<div class="card"><div class="cardh"><b>Stellenanzeigen</b><span class="tag-s gray" style="margin-left:4px">'+ns.length+'</span><button class="btn sm" onclick="editStelle(null,\''+c.id+'\')">+ Stelle</button></div>'+
-        (ns.length? ns.map(s=>{const st=s.status==='aktiv'?'green':s.status==='pausiert'?'gold':'gray';return '<div class="listrow" style="cursor:pointer" onclick="editStelle(\''+s.id+'\')"><div class="lt"><b>'+esc(s.titel)+'</b><small>'+esc(s.ort||'')+' \u00B7 '+state.bewerber.filter(b=>b.stellenanzeige_id===s.id).length+' Bewerber</small></div><span class="tag-s '+st+'">'+esc(s.status)+'</span></div>';}).join('') : '<div class="cardp muted" style="font-size:13.5px">Keine Stellen.</div>')+
+        (ns.length? ns.map(s=>{const st=s.status==='aktiv'?'green':s.status==='pausiert'?'gold':'gray';return '<div class="listrow" style="cursor:pointer" onclick="editStelle(\''+s.id+'\')"><div class="lt"><b>'+esc(s.titel)+'</b><small>'+esc(s.ort||'')+' \u00B7 '+bewCountForStelle(s.id)+' Bewerber</small></div><span class="tag-s '+st+'">'+esc(s.status)+'</span></div>';}).join('') : '<div class="cardp muted" style="font-size:13.5px">Keine Stellen.</div>')+
       '</div>'+
       '<div class="card"><div class="cardh"><b>Bewerber</b><span class="tag-s gray" style="margin-left:4px">'+nb.length+'</span></div>'+
         (nb.length? nb.slice(0,10).map(b=>{const st=statusOf(b.status);return '<div class="listrow" style="cursor:pointer" onclick="editBewerber(\''+b.id+'\')"><div class="lt"><b>'+esc(b.name)+'</b><small>'+esc(b.email||b.telefon||'')+'</small></div><span class="tag-s '+st.c+'">'+esc(st.label)+'</span></div>';}).join('') : '<div class="cardp muted" style="font-size:13.5px">Keine Bewerber.</div>')+
@@ -968,14 +1015,14 @@ function editCustomer(id){
       '<div class="frow"><label>Interne Notizen</label><textarea id="c-notiz">'+esc(c.notizen||'')+'</textarea></div>'+
       '<div class="divider"></div><div class="sec-title">Firmenprofil fürs Stellenportal <span class="muted" style="text-transform:none;font-weight:500">(erscheint im Tab \u201eÜber uns\u201c auf der Stellenseite)</span></div>'+
       '<div class="frow2">'+
-        '<div class="frow"><label>Logo</label><div class="uprow">'+upBtn('Logo hochladen','pickSingle(this,CUP,\'logo_url\',cupFolder(),renderCupLogo)')+'<span class="uphint">PNG/JPG</span></div><div class="thumbs" id="cup-logo"></div></div>'+
-        '<div class="frow"><label>Titelbild (Banner)</label><div class="uprow">'+upBtn('Banner hochladen','pickSingle(this,CUP,\'titelbild\',cupFolder(),renderCupTitel)')+'<span class="uphint">quer, z.B. 1600\u00d7500</span></div><div class="thumbs" id="cup-titel"></div></div>'+
+        '<div class="frow"><label>Logo</label><div class="uprow">'+upBtn('Logo hochladen','pickSingle(this,CUP,\'logo_url\',cupFolder(),renderCupLogo)')+'<span class="uphint">Quadratisch, transparentes PNG \u00b7 min. 400\u00d7400 px \u00b7 erscheint als eckiges Logo-Icon (44\u201374 px) im Profil</span></div><div class="thumbs" id="cup-logo"></div></div>'+
+        '<div class="frow"><label>Titelbild (Banner)</label><div class="uprow">'+upBtn('Banner hochladen','pickSingle(this,CUP,\'titelbild\',cupFolder(),renderCupTitel)')+'<span class="uphint">Querformat 1600\u00d7600 px (8:3) \u00b7 Banner ganz oben im Profil, wird auf volle Breite zugeschnitten \u2013 Motiv mittig halten</span></div><div class="thumbs" id="cup-titel"></div></div>'+
       '</div>'+
       '<div class="frow"><label>Über uns (Beschreibung der Firma)</label><textarea id="c-ueber" placeholder="Wer seid ihr? Was macht euch als Arbeitgeber aus?">'+esc(c.ueber_uns||'')+'</textarea></div>'+
       '<div class="frow2"><div class="frow"><label>Mitarbeiterzahl</label><input id="c-mitarb" value="'+esc(c.mitarbeiter_anzahl||'')+'" placeholder="z.B. 190"></div>'+
       '<div class="frow"><label>Gegründet (Jahr)</label><input id="c-gruend" value="'+esc(c.gruendungsjahr||'')+'" placeholder="z.B. 1960"></div></div>'+
       '<div class="frow"><label>Karriereseite-URL</label><input id="c-karriere" value="'+esc(c.karriere_url||'')+'" placeholder="https://\u2026/karriere"></div>'+
-      '<div class="frow"><label>Unternehmensbilder <span class="muted" style="font-weight:500;text-transform:none">(mehrere möglich)</span></label><div class="uprow">'+upBtn('Bilder hochladen','pickMulti(this,CUP.unternehmensbilder,cupFolder(),renderCupImgs)',true)+'<span class="uphint">Baustellen, Team, Maschinen \u2026</span></div><div class="thumbs" id="cup-imgs"></div></div>'+
+      '<div class="frow"><label>Unternehmensbilder <span class="muted" style="font-weight:500;text-transform:none">(mehrere möglich)</span></label><div class="uprow">'+upBtn('Bilder hochladen','pickMulti(this,CUP.unternehmensbilder,cupFolder(),renderCupImgs)',true)+'<span class="uphint">Querformat, min. 1200\u00d7800 px \u00b7 laufen im Bild-Karussell des Profils (volle Breite, ca. 16:9-Ausschnitt) \u00b7 Baustellen, Team, Maschinen \u2026</span></div><div class="thumbs" id="cup-imgs"></div></div>'+
       '<div class="frow2"><div class="frow"><label>Instagram</label><input id="c-insta" value="'+esc(soc.instagram||'')+'" placeholder="https://instagram.com/\u2026"></div>'+
       '<div class="frow"><label>LinkedIn</label><input id="c-linkedin" value="'+esc(soc.linkedin||'')+'" placeholder="https://linkedin.com/\u2026"></div></div>',
     footer:
@@ -1032,7 +1079,7 @@ function viewStellen(){
     '<div class="card tablecard">'+
     (rows.length? '<table><thead><tr><th>Titel</th><th>Kunde</th><th class="hide-sm">Ort</th><th class="right">Bewerber</th><th>Status</th></tr></thead><tbody>'+
       rows.map(s=>{
-        const nb=state.bewerber.filter(b=>b.stellenanzeige_id===s.id).length;
+        const nb=bewCountForStelle(s.id);
         const st=s.status==='aktiv'?'green':s.status==='pausiert'?'gold':'gray';
         return '<tr onclick="editStelle(\''+s.id+'\')"><td><b>'+esc(s.titel)+'</b><div class="muted" style="font-size:12px">'+esc(s.branche||'')+'</div></td>'+
           '<td>'+esc(cust(s.customer_id)?.name||'\u2014')+'</td>'+
@@ -1114,7 +1161,7 @@ function editStelle(id,preCust){
         '<div class="frow"><label>Kurzbeschreibung <span class="req">*</span></label><textarea id="s-besch" placeholder="Worum geht es bei der Stelle? Das liest der Bewerber zuerst.">'+esc(s.beschreibung||'')+'</textarea></div>'+
         chipBlock('aufgaben','Deine Aufgaben','z.B. Verlegen von Kanalrohren','Eine Aufgabe eintippen und mit Enter oder \u201eHinzufügen\u201c bestätigen \u2013 erscheint mit grünem Haken.')+
         chipBlock('profil','Dein Profil / Anforderungen','z.B. Führerschein Klasse B','Eine Anforderung eintippen und bestätigen.')+
-        '<div class="frow"><label>Stellen-Bilder</label><div class="uprow">'+upBtn('Bilder hochladen','pickMulti(this,WMP.stellen_bilder,wmpFolder(),renderWmpImgs)',true)+'<span class="uphint">Baustelle, Team, Maschinen \u2026 (optional)</span></div><div class="thumbs" id="wmp-imgs"></div></div>'+
+        '<div class="frow"><label>Stellen-Bilder</label><div class="uprow">'+upBtn('Bilder hochladen','pickMulti(this,WMP.stellen_bilder,wmpFolder(),renderWmpImgs)',true)+'<span class="uphint">Querformat, min. 1200\u00d7800 px \u00b7 1. Bild = Vorschau in der Stellen\u00fcbersicht, alle laufen im Karussell der Anzeige (volle Breite, 16:9) \u00b7 (optional)</span></div><div class="thumbs" id="wmp-imgs"></div></div>'+
       '</div>'+
 
       /* ---- Step 2: Benefits ---- */
@@ -1132,7 +1179,7 @@ function editStelle(id,preCust){
         '<div class="hint" style="margin-bottom:14px">Vorausgefüllt aus dem Kundenprofil \u2013 hier pro Stelle anpassbar.</div>'+
         '<div class="frow2"><div class="frow"><label>Name</label><input id="s-ap" value="'+esc(s.ansprechpartner||c?.ansprechpartner||'')+'" placeholder="Vor- und Nachname"></div>'+
         '<div class="frow"><label>Rolle / Position</label><input id="s-aprolle" value="'+esc(s.ansprechpartner_rolle||'')+'" placeholder="z.B. Personalleiterin"></div></div>'+
-        '<div class="frow"><label>Foto Ansprechpartner</label><div class="uprow">'+upBtn('Foto hochladen','pickSingle(this,WMP,\'ansprechpartner_foto\',wmpFolder(),renderWmpFoto)')+'<span class="uphint">Portraitfoto (optional)</span></div><div class="thumbs" id="wmp-foto"></div></div>'+
+        '<div class="frow"><label>Foto Ansprechpartner</label><div class="uprow">'+upBtn('Foto hochladen','pickSingle(this,WMP,\'ansprechpartner_foto\',wmpFolder(),renderWmpFoto)')+'<span class="uphint">Quadratisch, Gesicht mittig \u00b7 min. 400\u00d7400 px \u00b7 wird rund angezeigt (54 px) \u00b7 (optional)</span></div><div class="thumbs" id="wmp-foto"></div></div>'+
         '<div class="frow2"><div class="frow"><label>Kontakt E-Mail</label><input id="s-kmail" value="'+esc(s.kontakt_email||c?.email||'')+'" placeholder="bewerbung@firma.de"></div>'+
         '<div class="frow"><label>Kontakt Telefon</label><input id="s-ktel" value="'+esc(s.kontakt_telefon||c?.telefon||'')+'" placeholder="0151 \u2026"></div></div>'+
       '</div>'+
@@ -1286,7 +1333,7 @@ function renderBoard(rows){
       '<div class="kbody">'+items.map(b=>
         '<div class="kcard" draggable="true" ondragstart="kDragStart(event,\''+b.id+'\')" onclick="editBewerber(\''+b.id+'\')">'+
         '<b>'+esc(b.name)+'</b>'+
-        '<div class="sub">'+esc(cust(b.customer_id)?.name||'\u2014 offen')+'</div>'+
+        '<div class="sub">'+custCellTxt(b)+'</div>'+
         '<div class="kf"><span class="miniquelle">'+esc(b.quelle||'manuell')+'</span>'+(b.rating?'<span class="stars">'+'\u2605'.repeat(b.rating)+'</span>':'')+'</div>'+
         '</div>'
       ).join('')+'</div></div>';
@@ -1313,14 +1360,15 @@ function tableBewerber(rows, showCust, clickable){
       const click = clickable!==false? 'onclick="editBewerber(\''+b.id+'\')"':'';
       return '<tr '+click+'><td><b>'+esc(b.name)+'</b></td>'+
         '<td class="hide-sm muted">'+esc(b.email||'')+(b.telefon?'<br>'+esc(b.telefon):'')+'</td>'+
-        (showCust?'<td>'+(b.customer_id?esc(cust(b.customer_id)?.name||'?'):'<span class="tag-s gold">offen</span>')+'</td>':'')+
+        (showCust?'<td>'+custCellTxt(b)+'</td>':'')+
         '<td><span class="tag-s gray">'+esc(b.quelle||'manuell')+'</span></td>'+
         '<td><span class="tag-s '+st.c+'">'+esc(st.label)+'</span></td></tr>';
     }).join('')+'</tbody></table>';
 }
+let NEWASG=[];  // Pending-Zuordnungen fuer noch nicht gespeicherten Bewerber
 function editBewerber(id){
   const b=id? state.bewerber.find(x=>x.id===id):{name:'',email:'',telefon:'',quelle:'manuell',status:'neu',customer_id:'',stellenanzeige_id:'',notizen:''};
-  const custOpts='<option value="">\u2014 nicht zugeordnet</option>'+state.customers.map(c=>'<option value="'+c.id+'"'+(c.id===b.customer_id?' selected':'')+'>'+esc(c.name)+'</option>').join('');
+  NEWASG=[];
   const quelleOpts=QUELLE.map(o=>'<option'+(o===b.quelle?' selected':'')+'>'+o+'</option>').join('');
   const statusOpts=STATUS.map(o=>'<option value="'+o.id+'"'+(o.id===b.status?' selected':'')+'>'+o.label+'</option>').join('');
   openModal({
@@ -1331,8 +1379,7 @@ function editBewerber(id){
       '<div class="frow"><label>Telefon</label><input id="b-tel" value="'+esc(b.telefon||'')+'"></div></div>'+
       '<div class="frow2"><div class="frow"><label>Quelle</label><select id="b-quelle">'+quelleOpts+'</select></div>'+
       '<div class="frow"><label>Status</label><select id="b-status">'+statusOpts+'</select></div></div>'+
-      '<div class="frow"><label>Kunde (Zuordnung)</label><select id="b-cust" onchange="bStelleSync()">'+custOpts+'</select></div>'+
-      '<div class="frow"><label>Stelle</label><select id="b-stelle"></select></div>'+
+      '<div class="frow"><label>Betriebe zuordnen <span class="muted" style="font-weight:400">\u2013 Mehrfachzuordnung m\u00f6glich</span></label><div id="asgBox" class="asgbox">'+asgBoxHtml(id)+'</div></div>'+
       '<div class="frow2"><div class="frow"><label>Bewertung</label><div class="stars" id="b-stars">'+[1,2,3,4,5].map(n=>'<span class="star'+((b.rating||0)>=n?' on':'')+'" data-n="'+n+'" onclick="setStar('+n+')">\u2605</span>').join('')+'</div><input type="hidden" id="b-rating" value="'+(b.rating||0)+'"></div>'+
       '<div class="frow"><label>Tags (Komma-getrennt)</label><input id="b-tags" value="'+esc((b.tags||[]).join(', '))+'" placeholder="z.B. Führerschein, Erfahrung"></div></div>'+
       '<div class="frow"><label>Notizen</label><textarea id="b-notiz">'+esc(b.notizen||'')+'</textarea></div>'+
@@ -1341,7 +1388,75 @@ function editBewerber(id){
       '<div class="spacer"></div><button class="btn ghost" onclick="closeModal()">Abbrechen</button>'+
       '<button class="btn" onclick="saveBewerber('+(id?"'"+id+"'":'null')+')">Speichern</button>'
   });
-  bStelleSync(b.stellenanzeige_id);
+}
+/* ---- Multi-Zuordnungs-Manager im Bewerber-Modal ---- */
+function asgStelleOpts(cid,sel){
+  return '<option value="">\u2014 keine Stelle</option>'+state.stellen.filter(s=>s.customer_id===cid).map(s=>'<option value="'+s.id+'"'+(s.id===sel?' selected':'')+'>'+esc(s.titel)+'</option>').join('');
+}
+function asgBoxHtml(id){
+  let rows=[];
+  if(id){
+    asgRows(id).forEach(z=>rows.push({key:z.id,customer_id:z.customer_id,stellenanzeige_id:z.stellenanzeige_id,kind:'join'}));
+    const b=state.bewerber.find(x=>x.id===id);
+    if(b&&b.customer_id&&!rows.some(r=>r.customer_id===b.customer_id))
+      rows.push({key:'legacy',customer_id:b.customer_id,stellenanzeige_id:b.stellenanzeige_id,kind:'legacy'});
+  } else {
+    NEWASG.forEach((a,i)=>rows.push({key:String(i),customer_id:a.customer_id,stellenanzeige_id:a.stellenanzeige_id,kind:'new'}));
+  }
+  const taken=rows.map(r=>r.customer_id);
+  const list = rows.length ? rows.map(r=>{
+    const c=cust(r.customer_id);
+    const onCh = r.kind==='join'?'asgStelleJoin(\''+r.key+'\',this.value)':r.kind==='legacy'?'asgStelleLegacy(\''+id+'\',this.value)':'asgStelleNew('+r.key+',this.value)';
+    const onRm = r.kind==='join'?'asgRemoveJoin(\''+r.key+'\',\''+id+'\')':r.kind==='legacy'?'asgRemoveLegacy(\''+id+'\')':'asgRemoveNew('+r.key+')';
+    return '<div class="asg-row" style="display:flex;gap:8px;align-items:center;margin-bottom:7px">'+
+      '<b style="flex:0 0 34%;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(c?.name||'?')+'</b>'+
+      '<select style="flex:1;min-width:0;padding:6px 8px;border:1px solid var(--line);border-radius:8px" onchange="'+onCh+'">'+asgStelleOpts(r.customer_id,r.stellenanzeige_id)+'</select>'+
+      '<button type="button" class="btn ghost sm" title="Entfernen" onclick="'+onRm+'">\u2715</button>'+
+    '</div>';
+  }).join('') : '<div class="muted" style="font-size:13px;margin-bottom:8px">Noch keinem Betrieb zugeordnet.</div>';
+  const avail=state.customers.filter(c=>!taken.includes(c.id));
+  const addRow = avail.length ? '<div style="display:flex;gap:8px;align-items:center;margin-top:6px">'+
+      '<select id="asg-add-c" style="flex:0 0 44%;min-width:0;padding:7px 9px;border:1px solid var(--line);border-radius:8px" onchange="asgAddStelleSync()"><option value="">Betrieb w\u00e4hlen\u2026</option>'+avail.map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join('')+'</select>'+
+      '<select id="asg-add-s" style="flex:1;min-width:0;padding:7px 9px;border:1px solid var(--line);border-radius:8px"><option value="">\u2014 Stelle (optional)</option></select>'+
+      '<button type="button" class="btn sm" onclick="asgAdd('+(id?"'"+id+"'":'null')+')">+ Zuordnen</button>'+
+    '</div>' : (rows.length?'<div class="muted" style="font-size:12.5px;margin-top:4px">Allen Betrieben zugeordnet.</div>':'');
+  return list+addRow;
+}
+function asgAddStelleSync(){
+  const cid=$('#asg-add-c').value;
+  $('#asg-add-s').innerHTML='<option value="">\u2014 Stelle (optional)</option>'+state.stellen.filter(s=>s.customer_id===cid).map(s=>'<option value="'+s.id+'">'+esc(s.titel)+'</option>').join('');
+}
+function refreshAsg(id){const box=$('#asgBox');if(box)box.innerHTML=asgBoxHtml(id||null);}
+async function asgAdd(id){
+  const cid=$('#asg-add-c').value; if(!cid){toast('Betrieb w\u00e4hlen');return;}
+  const sid=$('#asg-add-s').value||null;
+  if(!id){ NEWASG.push({customer_id:cid,stellenanzeige_id:sid}); refreshAsg(null); return; }
+  if(!state.zuordLoaded){toast('Bitte zuerst SQL v8 ausf\u00fchren (Join-Tabelle fehlt)');return;}
+  const res=await sb.from('bewerber_zuordnung').insert({bewerber_id:id,customer_id:cid,stellenanzeige_id:sid,status:'gesichtet'});
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  await reload('zuordnungen'); refreshAsg(id); render(); toast('Betrieb zugeordnet');
+}
+async function asgRemoveJoin(zid,id){
+  const res=await sb.from('bewerber_zuordnung').delete().eq('id',zid);
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  await reload('zuordnungen'); await syncLegacy(id); await reload('bewerber'); refreshAsg(id); render(); toast('Zuordnung entfernt');
+}
+async function asgRemoveLegacy(id){
+  const res=await sb.from('bewerber').update({customer_id:null,stellenanzeige_id:null}).eq('id',id);
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  await reload('bewerber'); refreshAsg(id); render(); toast('Zuordnung entfernt');
+}
+function asgRemoveNew(i){ NEWASG.splice(i,1); refreshAsg(null); }
+async function asgStelleJoin(zid,sid){ const r=await sb.from('bewerber_zuordnung').update({stellenanzeige_id:sid||null}).eq('id',zid); if(!r.error)await reload('zuordnungen'); }
+async function asgStelleLegacy(id,sid){ const r=await sb.from('bewerber').update({stellenanzeige_id:sid||null}).eq('id',id); if(!r.error)await reload('bewerber'); }
+function asgStelleNew(i,sid){ if(NEWASG[i])NEWASG[i].stellenanzeige_id=sid||null; }
+async function syncLegacy(id){
+  const b=state.bewerber.find(x=>x.id===id); if(!b)return;
+  const rows=asgRows(id);
+  if(!rows.some(z=>z.customer_id===b.customer_id)){
+    const first=rows[0];
+    await sb.from('bewerber').update({customer_id:first?first.customer_id:null,stellenanzeige_id:first?first.stellenanzeige_id:null}).eq('id',id);
+  }
 }
 function extraBlock(extra){
   const keys=extra&&typeof extra==='object'?Object.keys(extra):[];
@@ -1365,10 +1480,25 @@ async function saveBewerber(id){
   const tags=$('#b-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
   const payload={name,email:$('#b-email').value.trim(),telefon:$('#b-tel').value.trim(),
     quelle:$('#b-quelle').value,status:$('#b-status').value,rating:Number($('#b-rating').value)||0,tags,
-    customer_id:$('#b-cust').value||null,stellenanzeige_id:$('#b-stelle').value||null,notizen:$('#b-notiz').value.trim()};
-  let res= id? await sb.from('bewerber').update(payload).eq('id',id) : await sb.from('bewerber').insert(payload);
+    notizen:$('#b-notiz').value.trim()};
+  let res,newId=id;
+  if(id){ res=await sb.from('bewerber').update(payload).eq('id',id); }
+  else {
+    // Erstzuordnung (erste NEWASG) als legacy customer_id mitgeben (Portal/Kompat)
+    const first=NEWASG[0];
+    if(first){ payload.customer_id=first.customer_id; payload.stellenanzeige_id=first.stellenanzeige_id||null; payload.status='gesichtet'; }
+    res=await sb.from('bewerber').insert(payload).select().single();
+    newId=res.data&&res.data.id;
+  }
   if(res.error){toast('Fehler: '+res.error.message);return;}
-  await reload('bewerber'); closeModal(); render(); toast(id?'Bewerber gespeichert':'Bewerber angelegt');
+  // Mehrfach-Zuordnungen in die Join-Tabelle schreiben (falls v8 vorhanden)
+  if(!id && newId && state.zuordLoaded && NEWASG.length){
+    const rows=NEWASG.map(a=>({bewerber_id:newId,customer_id:a.customer_id,stellenanzeige_id:a.stellenanzeige_id||null,status:'gesichtet'}));
+    const zr=await sb.from('bewerber_zuordnung').insert(rows);
+    if(zr.error)toast('Hinweis: Zuordnungen nicht gespeichert ('+zr.error.message+')');
+  }
+  NEWASG=[];
+  await reload('bewerber'); await reload('zuordnungen'); closeModal(); render(); toast(id?'Bewerber gespeichert':'Bewerber angelegt');
 }
 async function deleteBewerber(id){
   if(!confirm('Bewerber löschen?'))return;
@@ -1551,7 +1681,7 @@ async function csvImport(){
 
 /* ===================== MATCHING ===================== */
 function viewMatching(){
-  const open=state.bewerber.filter(b=>!b.customer_id);
+  const open=state.bewerber.filter(b=>!bewIsAssigned(b));
   const custOpts='<option value="all">Alle Kunden</option>'+state.customers.map(c=>'<option value="'+c.id+'"'+(state.filterCustomer===c.id?' selected':'')+'>'+esc(c.name)+'</option>').join('');
   $('#content').innerHTML=
     '<div class="card" style="padding:16px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'+
@@ -1574,7 +1704,7 @@ function viewMatching(){
     '<div class="toolbar"><div class="sec-title" style="margin:0">Zugeordnete Bewerber</div><div style="flex:1"></div>'+
       '<select onchange="state.filterCustomer=this.value;render()" style="padding:8px 11px;border:1px solid var(--line);border-radius:9px">'+custOpts+'</select></div>'+
     '<div class="card tablecard">'+
-      tableBewerber(state.bewerber.filter(b=>b.customer_id&&(state.filterCustomer==='all'||b.customer_id===state.filterCustomer)),true)+
+      tableBewerber(state.bewerber.filter(b=>bewIsAssigned(b)&&(state.filterCustomer==='all'||bewCustomerIds(b).includes(state.filterCustomer))),true)+
     '</div>';
 }
 function mStelle(bid){
@@ -1585,9 +1715,17 @@ function mStelle(bid){
 async function mAssign(bid){
   const cid=$('#m-c-'+bid).value; if(!cid){toast('Kunde wählen');return;}
   const sid=$('#m-s-'+bid).value||null;
-  const res=await sb.from('bewerber').update({customer_id:cid,stellenanzeige_id:sid,status:'gesichtet'}).eq('id',bid);
-  if(res.error){toast('Fehler: '+res.error.message);return;}
-  await reload('bewerber'); render(); toast('Bewerber zugeordnet');
+  if(state.zuordLoaded){
+    const res=await sb.from('bewerber_zuordnung').upsert({bewerber_id:bid,customer_id:cid,stellenanzeige_id:sid,status:'gesichtet'},{onConflict:'bewerber_id,customer_id'});
+    if(res.error){toast('Fehler: '+res.error.message);return;}
+    const b=state.bewerber.find(x=>x.id===bid);
+    if(b&&!b.customer_id){await sb.from('bewerber').update({customer_id:cid,stellenanzeige_id:sid,status:'gesichtet'}).eq('id',bid);}
+    await reload('zuordnungen'); await reload('bewerber'); render(); toast('Betrieb zugeordnet');
+  } else {
+    const res=await sb.from('bewerber').update({customer_id:cid,stellenanzeige_id:sid,status:'gesichtet'}).eq('id',bid);
+    if(res.error){toast('Fehler: '+res.error.message);return;}
+    await reload('bewerber'); render(); toast('Bewerber zugeordnet');
+  }
 }
 
 /* ===================== SUPPORT (global) ===================== */
