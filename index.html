@@ -156,6 +156,19 @@ tbody tr:hover{background:var(--soft)}
 .summ .si.ok{background:#e6f4ea;color:#1a7f37}
 .summ .si.miss{background:#fcefc7;color:#9a6700}
 .portal-link{font-size:12.5px;background:var(--line-2);border-radius:9px;padding:9px 11px;margin-top:12px;word-break:break-all}
+/* ---- Datei-Upload ---- */
+.uprow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.upbtn{display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:13.5px;font-weight:600;color:var(--text);cursor:pointer;transition:.12s}
+.upbtn:hover{border-color:var(--green);color:var(--green-2)}
+.upbtn.busy{opacity:.6;pointer-events:none}
+.upbtn input{display:none}
+.uphint{font-size:12px;color:var(--muted)}
+.thumbs{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.thumb{position:relative;width:88px;height:88px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--line-2)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb.wide{width:150px}
+.thumb .thx{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:6px;border:none;background:rgba(15,25,20,.72);color:#fff;font-size:14px;line-height:1;cursor:pointer;display:grid;place-items:center}
+.thumb .thx:hover{background:var(--danger)}
 @media(max-width:860px){.bgrid{grid-template-columns:1fr}}
 
 /* CSV preview */
@@ -355,9 +368,34 @@ const ABO_STATUS = [
   {v:'testphase',l:'Testphase',c:'gold'},{v:'aktiv',l:'Aktiv',c:'green'},
   {v:'pausiert',l:'Pausiert',c:'gray'},{v:'gekuendigt',l:'Gekuendigt',c:'red'}
 ];
-const ONBOARDING = [
-  {v:'neu',l:'Neu',c:'gray'},{v:'onboarding',l:'Onboarding',c:'gold'},
-  {v:'live',l:'Live',c:'green'},{v:'inaktiv',l:'Inaktiv',c:'red'}
+const KUNDENSTATUS = [
+  {v:'neu',l:'Neu',c:'gray'},
+  {v:'live',l:'Live',c:'green'},
+  {v:'inaktiv',l:'Inaktiv',c:'red'}
+];
+const KAUFTYP = [
+  {v:'',l:'\u2014 bitte waehlen'},
+  {v:'einmalzahlung',l:'Einmalzahlung'},
+  {v:'abo',l:'Abo'}
+];
+const PRODUKTE = [
+  {v:'',l:'\u2014 bitte waehlen'},
+  {v:'smart',l:'Smart'},
+  {v:'premium',l:'Premium'},
+  {v:'excellence',l:'Excellence'}
+];
+const LAUFZEITEN = [
+  {v:'',l:'\u2014'},
+  {v:'6',l:'6 Monate'},
+  {v:'12',l:'12 Monate'}
+];
+const ZAHLUNGSARTEN = [
+  {v:'',l:'\u2014 bitte waehlen'},
+  {v:'rechnung',l:'Rechnung'},
+  {v:'ueberweisung',l:'Ueberweisung'},
+  {v:'lastschrift',l:'Lastschrift / SEPA'},
+  {v:'paypal',l:'PayPal'},
+  {v:'karte',l:'Kreditkarte'}
 ];
 const TICKET_STATUS = [
   {v:'offen',l:'Offen',c:'gold'},{v:'in_arbeit',l:'In Arbeit',c:'blue'},
@@ -564,7 +602,7 @@ function viewDashboard(){
   const unassigned = state.bewerber.filter(b=>!b.customer_id).length;
   const mrr = state.customers.filter(c=>c.abo_status==='aktiv').reduce((a,c)=>a+(Number(c.mrr)||0),0);
   const openT = state.tickets.filter(t=>t.status!=='geloest').length;
-  const onbCounts = ONBOARDING.map(o=>({...o,n:state.customers.filter(c=>(c.onboarding_status||'neu')===o.v).length}));
+  const onbCounts = KUNDENSTATUS.map(o=>({...o,n:state.customers.filter(c=>(c.onboarding_status||'neu')===o.v).length}));
   $('#content').innerHTML =
     '<div class="stats">'+
       stat(state.customers.length,'Kunden')+
@@ -605,7 +643,7 @@ function viewKunden(){
     (rows.length? '<table><thead><tr><th>Betrieb</th><th class="hide-sm">Branchen</th><th>Abo</th><th>Status</th><th class="right">Bewerber</th></tr></thead><tbody>'+
       rows.map(c=>{
         const nb=state.bewerber.filter(b=>b.customer_id===c.id).length;
-        const pl=lookup(PLANS,c.plan||'free'), ab=lookup(ABO_STATUS,c.abo_status||'aktiv'), on=lookup(ONBOARDING,c.onboarding_status||'neu');
+        const pl=lookup(PLANS,c.plan||'free'), ab=lookup(ABO_STATUS,c.abo_status||'aktiv'), on=lookup(KUNDENSTATUS,c.onboarding_status||'neu');
         return '<tr onclick="openCustomer(\''+c.id+'\')">'+
           '<td><b>'+esc(c.name)+'</b><div class="muted" style="font-size:12px">'+esc(c.ort||'')+'</div></td>'+
           '<td class="hide-sm"><div class="chips">'+(c.branchen||[]).slice(0,2).map(b=>'<span class="tag-s '+(THEME_TAG[c.theme]||'gray')+'">'+esc(b)+'</span>').join('')+'</div></td>'+
@@ -625,7 +663,6 @@ function viewKundeDetail(){
   $('#pgTitle').textContent=c.name;
   $('#pgSub').textContent='Kunden-Cockpit';
   $('#pgActions').innerHTML='<button class="btn ghost" onclick="loginAsCustomer(\''+c.id+'\')">Kunden-OS ansehen</button> <button class="btn" onclick="editCustomer(\''+c.id+'\')">Stammdaten bearbeiten</button>';
-  const pl=lookup(PLANS,c.plan||'free'), ab=lookup(ABO_STATUS,c.abo_status||'aktiv'), on=lookup(ONBOARDING,c.onboarding_status||'neu');
   const mods=Object.assign(defaultModules(),c.modules||{});
   const ns=state.stellen.filter(s=>s.customer_id===c.id);
   const nb=state.bewerber.filter(b=>b.customer_id===c.id);
@@ -657,14 +694,23 @@ function viewKundeDetail(){
       // VERTRAG
       '<div class="card"><div class="cardh"><b>Vertrag & Abo</b></div><div class="cardp">'+
         '<div class="frow2">'+
-          '<div class="frow"><label>Tarif</label><select onchange="saveCustomerField(\''+c.id+'\',\'plan\',this.value)">'+PLANS.map(p=>'<option value="'+p.v+'"'+(p.v===(c.plan||'free')?' selected':'')+'>'+p.l+'</option>').join('')+'</select></div>'+
-          '<div class="frow"><label>Abo-Status</label><select onchange="saveCustomerField(\''+c.id+'\',\'abo_status\',this.value)">'+ABO_STATUS.map(p=>'<option value="'+p.v+'"'+(p.v===(c.abo_status||'aktiv')?' selected':'')+'>'+p.l+'</option>').join('')+'</select></div>'+
+          '<div class="frow"><label>Kauftyp</label>'+selField(c.id,'kauftyp',KAUFTYP,c.kauftyp||'')+'</div>'+
+          '<div class="frow"><label>Produkt</label>'+selField(c.id,'produkt',PRODUKTE,c.produkt||'')+'</div>'+
         '</div>'+
         '<div class="frow2">'+
-          '<div class="frow"><label>MRR (EUR/Monat)</label><input type="number" value="'+(Number(c.mrr)||0)+'" onchange="saveCustomerField(\''+c.id+'\',\'mrr\',this.value)"></div>'+
-          '<div class="frow"><label>Onboarding</label><select onchange="saveCustomerField(\''+c.id+'\',\'onboarding_status\',this.value)">'+ONBOARDING.map(p=>'<option value="'+p.v+'"'+(p.v===(c.onboarding_status||'neu')?' selected':'')+'>'+p.l+'</option>').join('')+'</select></div>'+
+          '<div class="frow"><label>Betrag (EUR)</label><input type="number" step="0.01" value="'+(c.betrag!=null?esc(String(c.betrag)):'')+'" placeholder="z.B. 1490" onchange="saveCustomerField(\''+c.id+'\',\'betrag\',this.value)"></div>'+
+          (c.kauftyp==='abo'
+            ? '<div class="frow"><label>Laufzeit</label>'+selField(c.id,'laufzeit',LAUFZEITEN,c.laufzeit||'')+'</div>'
+            : '<div class="frow"><label>Abo-Status</label>'+selField(c.id,'abo_status',ABO_STATUS,c.abo_status||'aktiv')+'</div>')+
         '</div>'+
-        '<div class="frow"><label>Vertragsbeginn</label><input type="date" value="'+esc(c.vertrag_start||'')+'" onchange="saveCustomerField(\''+c.id+'\',\'vertrag_start\',this.value)"></div>'+
+        (c.kauftyp==='abo'
+          ? '<div class="frow2"><div class="frow"><label>Zahlungsart</label>'+selField(c.id,'zahlungsart',ZAHLUNGSARTEN,c.zahlungsart||'')+'</div>'+
+            '<div class="frow"><label>Abo-Status</label>'+selField(c.id,'abo_status',ABO_STATUS,c.abo_status||'aktiv')+'</div></div>'
+          : '<div class="frow"><label>Zahlungsart</label>'+selField(c.id,'zahlungsart',ZAHLUNGSARTEN,c.zahlungsart||'')+'</div>')+
+        '<div class="frow2">'+
+          '<div class="frow"><label>Kundenstatus</label>'+selField(c.id,'onboarding_status',KUNDENSTATUS,c.onboarding_status||'neu')+'</div>'+
+          '<div class="frow"><label>Vertragsbeginn</label><input type="date" value="'+esc(c.vertrag_start||'')+'" onchange="saveCustomerField(\''+c.id+'\',\'vertrag_start\',this.value)"></div>'+
+        '</div>'+
       '</div></div>'+
     '</div>'+
     // MODULE
@@ -690,11 +736,11 @@ function viewKundeDetail(){
           '<select onchange="setTicketStatus(\''+t.id+'\',this.value)" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:12.5px">'+TICKET_STATUS.map(s=>'<option value="'+s.v+'"'+(s.v===t.status?' selected':'')+'>'+s.l+'</option>').join('')+'</select></div>';
         }).join('') : '<div class="cardp muted" style="font-size:13.5px">Keine Tickets.</div>')+
       '</div>'+
-      // AKTIVITAET
-      '<div class="card"><div class="cardh"><b>Aktivitaet & Notizen</b><button class="btn sm" onclick="addActivityModal(\''+c.id+'\')">+ Eintrag</button></div>'+
-        (acts.length? acts.slice(0,12).map(a=>
-          '<div class="listrow"><div class="lt"><b>'+esc(a.text)+'</b><small>'+fmtDate(a.created_at)+(a.actor?' \u00B7 '+esc(a.actor):'')+'</small></div></div>'
-        ).join('') : '<div class="cardp muted" style="font-size:13.5px">Noch keine Eintraege.</div>')+
+      // INTERNE KOMMENTARE
+      '<div class="card"><div class="cardh"><b>Interne Kommentare</b><span class="muted" style="font-size:12px;font-weight:500">&nbsp;\u2014 nur intern sichtbar</span><button class="btn sm" onclick="addActivityModal(\''+c.id+'\')">+ Kommentar</button></div>'+
+        (acts.length? acts.slice(0,20).map(a=>
+          '<div class="listrow"><div class="lt"><small style="color:var(--green-2);font-weight:700">'+esc(a.actor||'Unbekannt')+'</small> <small>\u00B7 '+fmtDate(a.created_at)+'</small><b style="font-weight:500;white-space:pre-wrap">'+esc(a.text)+'</b></div></div>'
+        ).join('') : '<div class="cardp muted" style="font-size:13.5px">Noch keine Kommentare. Halte hier Anrufe, No-Shows oder Absprachen fest \u2013 mit Name &amp; Zeit.</div>')+
       '</div>'+
     '</div>'+
     // STELLEN & BEWERBER SUMMARY
@@ -708,13 +754,20 @@ function viewKundeDetail(){
     '</div>';
 }
 function row(k,v){ return '<div class="k">'+esc(k)+'</div><div class="v">'+(v?esc(v):'<span class="muted">\u2014</span>')+'</div>'; }
+function selField(id,field,arr,cur){
+  return '<select onchange="saveCustomerField(\''+id+'\',\''+field+'\',this.value)">'+
+    arr.map(p=>'<option value="'+esc(p.v)+'"'+(p.v===cur?' selected':'')+'>'+esc(p.l)+'</option>').join('')+'</select>';
+}
 
 async function saveCustomerField(id,field,val){
   if(field==='mrr') val=Number(val)||0;
+  if(field==='betrag') val=(val===''||val==null)?null:(Number(val)||0);
   if(field==='vertrag_start' && !val) val=null;
+  if(['kauftyp','produkt','laufzeit','zahlungsart'].includes(field) && val==='') val=null;
   const res=await sb.from('customers').update({[field]:val}).eq('id',id);
   if(res.error){toast('Fehler: '+res.error.message);return;}
-  await reload('customers'); toast('Gespeichert');
+  // Kauftyp aendert die Sichtbarkeit von Laufzeit -> Cockpit neu rendern
+  await reload('customers'); render(); toast('Gespeichert');
 }
 async function toggleModule(id,mod,on){
   const c=cust(id); const mods=Object.assign(defaultModules(),c.modules||{}); mods[mod]=on;
@@ -799,20 +852,81 @@ async function setTicketStatus(id,val){
 
 /* ---- Aktivitaet ---- */
 function addActivityModal(cid){
-  openModal({title:'Notiz / Aktivitaet',
-    body:'<div class="frow"><label>Eintrag *</label><textarea id="a-text" placeholder="z.B. Onboarding-Call gefuehrt, Stelle besprochen..."></textarea></div>',
+  openModal({title:'Interner Kommentar',
+    body:'<div class="frow"><label>Kommentar *</label><textarea id="a-text" placeholder="z.B. Neukunde, 2x nicht erreicht wegen Stellenfreischaltung \u2013 morgen erneut probieren."></textarea><div class="hint">Wird mit deinem Namen und Zeitstempel gespeichert und ist nur intern sichtbar.</div></div>',
     footer:'<div class="spacer"></div><button class="btn ghost" onclick="closeModal()">Abbrechen</button><button class="btn" onclick="saveActivity(\''+cid+'\')">Speichern</button>'});
 }
 async function saveActivity(cid){
   const text=$('#a-text').value.trim(); if(!text){toast('Text fehlt');return;}
   const res=await sb.from('activity_log').insert({customer_id:cid,text,typ:'notiz',actor:state.profile.name||state.profile.email});
   if(res.error){toast('Fehler: '+res.error.message);return;}
-  await reload('activity'); closeModal(); render(); toast('Eintrag gespeichert');
+  await reload('activity'); closeModal(); render(); toast('Kommentar gespeichert');
+}
+
+/* ===================== DATEI-UPLOAD (Supabase Storage) ===================== */
+const MEDIA_BUCKET='portal-media';
+let CUP={}, WMP={};   // CUP=Kunden-Bilder, WMP=Stellen-Bilder (Form-Zwischenstand)
+async function uploadMedia(file, folder){
+  const ext=((file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg');
+  const base=(folder||'misc').replace(/[^a-z0-9_\/-]/gi,'-');
+  const path=base+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+ext;
+  const {error}=await sb.storage.from(MEDIA_BUCKET).upload(path,file,{upsert:true,cacheControl:'3600',contentType:file.type||undefined});
+  if(error) throw error;
+  return sb.storage.from(MEDIA_BUCKET).getPublicUrl(path).data.publicUrl;
+}
+async function pickSingle(input, obj, key, folder, rerenderFn){
+  const f=input.files&&input.files[0]; if(!f) return;
+  const btn=input.closest('.upbtn'); if(btn) btn.classList.add('busy');
+  try{ obj[key]=await uploadMedia(f,folder); rerenderFn(); }
+  catch(e){ toast('Upload fehlgeschlagen: '+(e.message||e)); }
+  finally{ if(btn) btn.classList.remove('busy'); input.value=''; }
+}
+async function pickMulti(input, arr, folder, rerenderFn){
+  const files=[...(input.files||[])]; if(!files.length) return;
+  const btn=input.closest('.upbtn'); if(btn) btn.classList.add('busy');
+  try{ for(const f of files){ arr.push(await uploadMedia(f,folder)); } rerenderFn(); }
+  catch(e){ toast('Upload fehlgeschlagen: '+(e.message||e)); }
+  finally{ if(btn) btn.classList.remove('busy'); input.value=''; }
+}
+function thumbHTML(url, removeCall, wide){
+  return '<div class="thumb'+(wide?' wide':'')+'"><img src="'+esc(url)+'" alt=""><button type="button" class="thx" onclick="'+removeCall+'">\u00D7</button></div>';
+}
+function upBtn(label, onchangeCall, multi){
+  return '<label class="upbtn">\u2191 '+esc(label)+'<input type="file" accept="image/*"'+(multi?' multiple':'')+' onchange="'+onchangeCall+'"></label>';
+}
+// --- Kunden-Bilder (CUP) ---
+function cupFolder(){ return 'kunden/'+(CUP._id||'_new'); }
+function renderCupLogo(){ const el=$('#cup-logo'); if(el) el.innerHTML=CUP.logo_url?thumbHTML(CUP.logo_url,"cupDel('logo_url')"):''; }
+function renderCupTitel(){ const el=$('#cup-titel'); if(el) el.innerHTML=CUP.titelbild?thumbHTML(CUP.titelbild,"cupDel('titelbild')",true):''; }
+function renderCupImgs(){ const el=$('#cup-imgs'); if(el) el.innerHTML=CUP.unternehmensbilder.map((u,i)=>thumbHTML(u,'cupDelImg('+i+')')).join(''); }
+function cupDel(key){ CUP[key]=''; key==='logo_url'?renderCupLogo():renderCupTitel(); }
+function cupDelImg(i){ CUP.unternehmensbilder.splice(i,1); renderCupImgs(); }
+// --- Stellen-Bilder (WMP) ---
+function wmpFolder(){ return 'stellen/'+(WMP._id||'_new'); }
+function renderWmpImgs(){ const el=$('#wmp-imgs'); if(el) el.innerHTML=WMP.stellen_bilder.map((u,i)=>thumbHTML(u,'wmpDelImg('+i+')')).join(''); }
+function renderWmpFoto(){ const el=$('#wmp-foto'); if(el) el.innerHTML=WMP.ansprechpartner_foto?thumbHTML(WMP.ansprechpartner_foto,'wmpDelFoto()'):''; }
+function wmpDelImg(i){ WMP.stellen_bilder.splice(i,1); renderWmpImgs(); }
+function wmpDelFoto(){ WMP.ansprechpartner_foto=''; renderWmpFoto(); }
+
+/* PLZ -> Ort automatisch befuellen (nur wenn Ort leer; bleibt editierbar) */
+async function plzAutofill(){
+  const plzEl=$('#c-plz'), ortEl=$('#c-ort');
+  if(!plzEl||!ortEl) return;
+  const plz=plzEl.value.trim();
+  if(!/^\d{5}$/.test(plz) || ortEl.value.trim()) return;
+  try{
+    const r=await fetch('https://api.zippopotam.us/de/'+plz);
+    if(!r.ok) return;
+    const d=await r.json();
+    const place=d&&d.places&&d.places[0]&&d.places[0]['place name'];
+    if(place && !ortEl.value.trim()) ortEl.value=place;
+  }catch(e){/* offline o.ae. -> stiller Fallback, Feld bleibt manuell */}
 }
 
 function editCustomer(id){
   const c = id? cust(id) : {name:'',branchen:[],theme:'galabau',ort:'',telefon:'',email:'',notizen:'',ansprechpartner:'',strasse:'',plz:'',website:'',primary_color:'',logo_url:'',titelbild:'',ueber_uns:'',mitarbeiter_anzahl:'',gruendungsjahr:'',karriere_url:'',unternehmensbilder:[],social:{}};
-  const ubilder = Array.isArray(c.unternehmensbilder)? c.unternehmensbilder.join('\n') : (c.unternehmensbilder||'');
+  CUP={ _id:id||null, logo_url:c.logo_url||'', titelbild:c.titelbild||'',
+        unternehmensbilder:Array.isArray(c.unternehmensbilder)?[...c.unternehmensbilder]:[] };
   const soc = c.social||{};
   const fams = state.branchen.filter(b=>!b.parent_id);
   const subs = state.branchen.filter(b=>b.parent_id);
@@ -832,21 +946,23 @@ function editCustomer(id){
       '<div class="frow"><label>E-Mail</label><input id="c-email" value="'+esc(c.email||'')+'"></div>'+
       '<div class="frow"><label>Website</label><input id="c-web" value="'+esc(c.website||'')+'" placeholder="https://"></div>'+
       '<div class="frow"><label>Strasse & Nr.</label><input id="c-str" value="'+esc(c.strasse||'')+'"></div>'+
-      '<div class="frow2"><div class="frow"><label>PLZ</label><input id="c-plz" value="'+esc(c.plz||'')+'"></div>'+
-      '<div class="frow"><label>Ort</label><input id="c-ort" value="'+esc(c.ort||'')+'"></div></div>'+
+      '<div class="frow2"><div class="frow"><label>PLZ</label><input id="c-plz" value="'+esc(c.plz||'')+'" onblur="plzAutofill()" inputmode="numeric"></div>'+
+      '<div class="frow"><label>Ort <span class="muted" style="font-weight:500;text-transform:none">(wird aus PLZ vorgeschlagen)</span></label><input id="c-ort" value="'+esc(c.ort||'')+'"></div></div>'+
       '<div class="divider"></div><div class="sec-title">Branchen <span class="muted" style="text-transform:none;font-weight:500">(erste bestimmt das Farbschema im Kunden-OS)</span></div>'+
       branchChips+
       '<input type="hidden" id="c-theme" value="'+esc(c.theme||'galabau')+'">'+
       '<div class="frow2" style="margin-top:8px"><div class="frow"><label>Akzentfarbe (optional)</label><input id="c-color" type="text" value="'+esc(c.primary_color||'')+'" placeholder="#16A34A"></div><div class="frow"></div></div>'+
       '<div class="frow"><label>Interne Notizen</label><textarea id="c-notiz">'+esc(c.notizen||'')+'</textarea></div>'+
       '<div class="divider"></div><div class="sec-title">Firmenprofil fuers Stellenportal <span class="muted" style="text-transform:none;font-weight:500">(erscheint im Tab \u201eUeber uns\u201c auf der Stellenseite)</span></div>'+
-      '<div class="frow2"><div class="frow"><label>Logo-URL</label><input id="c-logo" value="'+esc(c.logo_url||'')+'" placeholder="https://\u2026/logo.png"></div>'+
-      '<div class="frow"><label>Titelbild-URL (Banner)</label><input id="c-titel" value="'+esc(c.titelbild||'')+'" placeholder="https://\u2026/banner.jpg"></div></div>'+
+      '<div class="frow2">'+
+        '<div class="frow"><label>Logo</label><div class="uprow">'+upBtn('Logo hochladen','pickSingle(this,CUP,\'logo_url\',cupFolder(),renderCupLogo)')+'<span class="uphint">PNG/JPG</span></div><div class="thumbs" id="cup-logo"></div></div>'+
+        '<div class="frow"><label>Titelbild (Banner)</label><div class="uprow">'+upBtn('Banner hochladen','pickSingle(this,CUP,\'titelbild\',cupFolder(),renderCupTitel)')+'<span class="uphint">quer, z.B. 1600\u00d7500</span></div><div class="thumbs" id="cup-titel"></div></div>'+
+      '</div>'+
       '<div class="frow"><label>Ueber uns (Beschreibung der Firma)</label><textarea id="c-ueber" placeholder="Wer seid ihr? Was macht euch als Arbeitgeber aus?">'+esc(c.ueber_uns||'')+'</textarea></div>'+
       '<div class="frow2"><div class="frow"><label>Mitarbeiterzahl</label><input id="c-mitarb" value="'+esc(c.mitarbeiter_anzahl||'')+'" placeholder="z.B. 190"></div>'+
       '<div class="frow"><label>Gegruendet (Jahr)</label><input id="c-gruend" value="'+esc(c.gruendungsjahr||'')+'" placeholder="z.B. 1960"></div></div>'+
       '<div class="frow"><label>Karriereseite-URL</label><input id="c-karriere" value="'+esc(c.karriere_url||'')+'" placeholder="https://\u2026/karriere"></div>'+
-      '<div class="frow"><label>Unternehmensbilder <span class="muted" style="font-weight:500">(eine Bild-URL pro Zeile)</span></label><textarea id="c-bilder" placeholder="https://\u2026/bild1.jpg&#10;https://\u2026/bild2.jpg">'+esc(ubilder)+'</textarea></div>'+
+      '<div class="frow"><label>Unternehmensbilder <span class="muted" style="font-weight:500;text-transform:none">(mehrere moeglich)</span></label><div class="uprow">'+upBtn('Bilder hochladen','pickMulti(this,CUP.unternehmensbilder,cupFolder(),renderCupImgs)',true)+'<span class="uphint">Baustellen, Team, Maschinen \u2026</span></div><div class="thumbs" id="cup-imgs"></div></div>'+
       '<div class="frow2"><div class="frow"><label>Instagram</label><input id="c-insta" value="'+esc(soc.instagram||'')+'" placeholder="https://instagram.com/\u2026"></div>'+
       '<div class="frow"><label>LinkedIn</label><input id="c-linkedin" value="'+esc(soc.linkedin||'')+'" placeholder="https://linkedin.com/\u2026"></div></div>',
     footer:
@@ -855,6 +971,7 @@ function editCustomer(id){
       '<button class="btn ghost" onclick="closeModal()">Abbrechen</button>'+
       '<button class="btn" onclick="saveCustomer('+(id?"'"+id+"'":'null')+')">Speichern</button>'
   });
+  renderCupLogo(); renderCupTitel(); renderCupImgs();
 }
 function toggleBranche(el){
   el.classList.toggle('on');
@@ -865,7 +982,7 @@ async function saveCustomer(id){
   const name=$('#c-name').value.trim();
   if(!name){toast('Name fehlt');return;}
   const branchen=[...document.querySelectorAll('.selchip.on')].map(e=>e.dataset.br);
-  const ubilder=$('#c-bilder').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const ubilder=(CUP.unternehmensbilder||[]).filter(Boolean);
   const social={};
   const insta=$('#c-insta').value.trim(); if(insta) social.instagram=insta;
   const linkedin=$('#c-linkedin').value.trim(); if(linkedin) social.linkedin=linkedin;
@@ -873,7 +990,7 @@ async function saveCustomer(id){
     ansprechpartner:$('#c-ap').value.trim(),website:$('#c-web').value.trim(),strasse:$('#c-str').value.trim(),
     plz:$('#c-plz').value.trim(),primary_color:$('#c-color').value.trim()||null,
     notizen:$('#c-notiz').value.trim(),branchen,theme:$('#c-theme').value||'galabau',
-    logo_url:$('#c-logo').value.trim()||null,titelbild:$('#c-titel').value.trim()||null,
+    logo_url:CUP.logo_url||null,titelbild:CUP.titelbild||null,
     ueber_uns:$('#c-ueber').value.trim()||null,mitarbeiter_anzahl:$('#c-mitarb').value.trim()||null,
     gruendungsjahr:$('#c-gruend').value.trim()||null,karriere_url:$('#c-karriere').value.trim()||null,
     unternehmensbilder:ubilder,social};
@@ -929,11 +1046,11 @@ function editStelle(id,preCust){
     kontakt_email:'',kontakt_telefon:''};
   const c=cust(s.customer_id);
   WIZ={step:0,id:id||null,last:4,visited:{0:true}};
+  WMP={ _id:id||null, stellen_bilder:Array.isArray(s.stellen_bilder)?[...s.stellen_bilder]:[], ansprechpartner_foto:s.ansprechpartner_foto||'' };
   // Benefits: gespeicherte Liste, getrennt in Katalog-Treffer + eigene
   const benList=Array.isArray(s.benefits_list)? s.benefits_list.slice() : (s.benefits? String(s.benefits).split(/\r?\n/).map(x=>x.trim()).filter(Boolean):[]);
   const benSet=new Set(benList);
   const benCustom=benList.filter(b=>!BEN_CATALOG.includes(b));
-  const sbilder=Array.isArray(s.stellen_bilder)? s.stellen_bilder.join('\n') : (s.stellen_bilder||'');
 
   const custOpts=state.customers.map(x=>'<option value="'+x.id+'"'+(x.id===s.customer_id?' selected':'')+'>'+esc(x.name)+'</option>').join('');
   const statusOpts=[['aktiv','Veroeffentlicht (live im Portal)'],['pausiert','Pausiert (nicht sichtbar)'],['geschlossen','Geschlossen']]
@@ -970,7 +1087,7 @@ function editStelle(id,preCust){
         '<div class="frow"><label>Kurzbeschreibung <span class="req">*</span></label><textarea id="s-besch" placeholder="Worum geht es bei der Stelle? Das liest der Bewerber zuerst.">'+esc(s.beschreibung||'')+'</textarea></div>'+
         '<div class="frow"><label>Deine Aufgaben</label><textarea id="s-aufgaben" placeholder="Eine Aufgabe pro Zeile \u2013 wird als Liste mit Haken angezeigt">'+esc(s.aufgaben||'')+'</textarea><div class="hint">Eine Aufgabe pro Zeile.</div></div>'+
         '<div class="frow"><label>Dein Profil / Anforderungen</label><textarea id="s-profil" placeholder="Eine Anforderung pro Zeile">'+esc(s.profil||'')+'</textarea><div class="hint">Eine Anforderung pro Zeile.</div></div>'+
-        '<div class="frow"><label>Stellen-Bilder</label><textarea id="s-bilder" placeholder="Eine Bild-URL pro Zeile (Baustelle, Team, Maschinen \u2026)">'+esc(sbilder)+'</textarea><div class="hint">Eine Bild-URL pro Zeile (optional).</div></div>'+
+        '<div class="frow"><label>Stellen-Bilder</label><div class="uprow">'+upBtn('Bilder hochladen','pickMulti(this,WMP.stellen_bilder,wmpFolder(),renderWmpImgs)',true)+'<span class="uphint">Baustelle, Team, Maschinen \u2026 (optional)</span></div><div class="thumbs" id="wmp-imgs"></div></div>'+
       '</div>'+
 
       /* ---- Step 2: Benefits ---- */
@@ -985,7 +1102,7 @@ function editStelle(id,preCust){
         '<div class="hint" style="margin-bottom:14px">Vorausgefuellt aus dem Kundenprofil \u2013 hier pro Stelle anpassbar.</div>'+
         '<div class="frow2"><div class="frow"><label>Name</label><input id="s-ap" value="'+esc(s.ansprechpartner||c?.ansprechpartner||'')+'" placeholder="Vor- und Nachname"></div>'+
         '<div class="frow"><label>Rolle / Position</label><input id="s-aprolle" value="'+esc(s.ansprechpartner_rolle||'')+'" placeholder="z.B. Personalleiterin"></div></div>'+
-        '<div class="frow"><label>Foto-URL</label><input id="s-apfoto" value="'+esc(s.ansprechpartner_foto||'')+'" placeholder="https://\u2026/foto.jpg"></div>'+
+        '<div class="frow"><label>Foto Ansprechpartner</label><div class="uprow">'+upBtn('Foto hochladen','pickSingle(this,WMP,\'ansprechpartner_foto\',wmpFolder(),renderWmpFoto)')+'<span class="uphint">Portraitfoto (optional)</span></div><div class="thumbs" id="wmp-foto"></div></div>'+
         '<div class="frow2"><div class="frow"><label>Kontakt E-Mail</label><input id="s-kmail" value="'+esc(s.kontakt_email||c?.email||'')+'" placeholder="bewerbung@firma.de"></div>'+
         '<div class="frow"><label>Kontakt Telefon</label><input id="s-ktel" value="'+esc(s.kontakt_telefon||c?.telefon||'')+'" placeholder="0151 \u2026"></div></div>'+
       '</div>'+
@@ -1005,6 +1122,7 @@ function editStelle(id,preCust){
       '<button class="btn" id="wiz-save" onclick="saveStelle('+(id?"'"+id+"'":'null')+')" style="display:none">'+(id?'Speichern':'Stelle anlegen')+'</button>'
   });
   wizGo(0);
+  renderWmpImgs(); renderWmpFoto();
 }
 function wizCustChange(){
   const c=cust($('#s-cust').value); if(!c) return;
@@ -1042,7 +1160,7 @@ function wizCollectBenefits(){
 function wizRenderSumm(){
   const row=(ok,label,hint)=>'<div class="srow"><span class="si '+(ok?'ok':'miss')+'">'+(ok?'\u2713':'!')+'</span><span>'+label+(ok?'':' <span class="muted">\u2013 '+hint+'</span>')+'</span></div>';
   const benN=wizCollectBenefits().length;
-  const bilderN=$('#s-bilder').value.split(/\r?\n/).filter(x=>x.trim()).length;
+  const bilderN=(WMP.stellen_bilder||[]).length;
   $('#wizSumm').innerHTML=
     row(!!$('#s-titel').value.trim(),'Stellentitel','Pflicht (Schritt 1)')+
     row(!!$('#s-besch').value.trim(),'Kurzbeschreibung','Pflicht (Schritt 2)')+
@@ -1064,7 +1182,7 @@ async function saveStelle(id){
   if(!$('#s-besch').value.trim()){wizGo(1);return wizErr('Bitte fuelle die <b>Kurzbeschreibung</b> aus (Schritt 2).');}
   const status=$('#s-status').value;
   const benefitsList=wizCollectBenefits();
-  const stellenBilder=$('#s-bilder').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const stellenBilder=(WMP.stellen_bilder||[]).filter(Boolean);
   const payload={titel,customer_id:$('#s-cust').value,branche:$('#s-branche').value.trim(),
     ort:$('#s-ort').value.trim(),status,beschreibung:$('#s-besch').value.trim(),
     beschaeftigungsart:$('#s-art').value,vertragsart:$('#s-vt').value,
@@ -1072,7 +1190,7 @@ async function saveStelle(id){
     aufgaben:$('#s-aufgaben').value.trim(),profil:$('#s-profil').value.trim(),
     benefits:benefitsList.join('\n'),benefits_list:benefitsList,stellen_bilder:stellenBilder,
     ansprechpartner:$('#s-ap').value.trim(),ansprechpartner_rolle:$('#s-aprolle').value.trim(),
-    ansprechpartner_foto:$('#s-apfoto').value.trim(),
+    ansprechpartner_foto:WMP.ansprechpartner_foto||null,
     kontakt_email:$('#s-kmail').value.trim(),kontakt_telefon:$('#s-ktel').value.trim()};
   if(status==='aktiv') payload.published_at=new Date().toISOString();
   const btn=$('#wiz-save'); if(btn){btn.disabled=true;btn.textContent='Speichern \u2026';}
