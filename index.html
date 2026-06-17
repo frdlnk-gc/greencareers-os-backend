@@ -122,6 +122,39 @@ tbody tr:hover{background:var(--soft)}
 .divider{height:1px;background:var(--line);margin:18px 0}
 .sec-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:4px 0 10px}
 
+/* ---------- WIZARD ---------- */
+.wsteps{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
+.wstep{flex:1;min-width:96px;display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--line);border-radius:11px;background:#fff;cursor:pointer;transition:.15s}
+.wstep:hover{border-color:var(--green)}
+.wstep .wn{flex:none;width:22px;height:22px;border-radius:50%;background:var(--line-2);color:var(--muted);font-size:12px;font-weight:800;display:grid;place-items:center}
+.wstep .wl{font-size:12.5px;font-weight:700;color:var(--muted);line-height:1.15}
+.wstep.on{border-color:var(--green);background:var(--soft)}
+.wstep.on .wn{background:var(--green);color:#fff}
+.wstep.on .wl{color:var(--green-2)}
+.wstep.done .wn{background:#e6f4ea;color:#1a7f37}
+.wstep.done .wn::after{content:"✓"}
+.wstep.done .wn{font-size:0}
+.wstep.done .wn::after{font-size:12px}
+.wpane{display:none}
+.wpane.on{display:block;animation:pop .15s ease}
+.werr{display:none;background:#fdecea;border:1px solid #f5c2bd;color:#b3261e;font-size:13px;font-weight:600;padding:10px 13px;border-radius:10px;margin-bottom:14px}
+.werr.on{display:block}
+.werr ul{margin:6px 0 0;padding-left:18px;font-weight:500}
+.req{color:#b3261e}
+.bgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bopt{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text);background:#fff;transition:.12s}
+.bopt:hover{border-color:var(--green)}
+.bopt.on{background:var(--soft);border-color:var(--green);color:var(--green-2)}
+.bopt .bx{flex:none;width:18px;height:18px;border-radius:5px;border:1.5px solid var(--line);display:grid;place-items:center;font-size:11px;color:#fff}
+.bopt.on .bx{background:var(--green);border-color:var(--green)}
+.summ{display:flex;flex-direction:column;gap:7px}
+.summ .srow{display:flex;align-items:center;gap:9px;font-size:13.5px}
+.summ .si{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800}
+.summ .si.ok{background:#e6f4ea;color:#1a7f37}
+.summ .si.miss{background:#fcefc7;color:#9a6700}
+.portal-link{font-size:12.5px;background:var(--line-2);border-radius:9px;padding:9px 11px;margin-top:12px;word-break:break-all}
+@media(max-width:860px){.bgrid{grid-template-columns:1fr}}
+
 /* CSV preview */
 .csvtable{border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:240px}
 .csvtable table{font-size:13px}
@@ -705,7 +738,9 @@ async function saveActivity(cid){
 }
 
 function editCustomer(id){
-  const c = id? cust(id) : {name:'',branchen:[],theme:'galabau',ort:'',telefon:'',email:'',notizen:'',ansprechpartner:'',strasse:'',plz:'',website:'',primary_color:''};
+  const c = id? cust(id) : {name:'',branchen:[],theme:'galabau',ort:'',telefon:'',email:'',notizen:'',ansprechpartner:'',strasse:'',plz:'',website:'',primary_color:'',logo_url:'',titelbild:'',ueber_uns:'',mitarbeiter_anzahl:'',gruendungsjahr:'',karriere_url:'',unternehmensbilder:[],social:{}};
+  const ubilder = Array.isArray(c.unternehmensbilder)? c.unternehmensbilder.join('\n') : (c.unternehmensbilder||'');
+  const soc = c.social||{};
   const fams = state.branchen.filter(b=>!b.parent_id);
   const subs = state.branchen.filter(b=>b.parent_id);
   const branchChips = fams.map(f=>{
@@ -730,7 +765,17 @@ function editCustomer(id){
       branchChips+
       '<input type="hidden" id="c-theme" value="'+esc(c.theme||'galabau')+'">'+
       '<div class="frow2" style="margin-top:8px"><div class="frow"><label>Akzentfarbe (optional)</label><input id="c-color" type="text" value="'+esc(c.primary_color||'')+'" placeholder="#16A34A"></div><div class="frow"></div></div>'+
-      '<div class="frow"><label>Interne Notizen</label><textarea id="c-notiz">'+esc(c.notizen||'')+'</textarea></div>',
+      '<div class="frow"><label>Interne Notizen</label><textarea id="c-notiz">'+esc(c.notizen||'')+'</textarea></div>'+
+      '<div class="divider"></div><div class="sec-title">Firmenprofil fuers Stellenportal <span class="muted" style="text-transform:none;font-weight:500">(erscheint im Tab \u201eUeber uns\u201c auf der Stellenseite)</span></div>'+
+      '<div class="frow2"><div class="frow"><label>Logo-URL</label><input id="c-logo" value="'+esc(c.logo_url||'')+'" placeholder="https://\u2026/logo.png"></div>'+
+      '<div class="frow"><label>Titelbild-URL (Banner)</label><input id="c-titel" value="'+esc(c.titelbild||'')+'" placeholder="https://\u2026/banner.jpg"></div></div>'+
+      '<div class="frow"><label>Ueber uns (Beschreibung der Firma)</label><textarea id="c-ueber" placeholder="Wer seid ihr? Was macht euch als Arbeitgeber aus?">'+esc(c.ueber_uns||'')+'</textarea></div>'+
+      '<div class="frow2"><div class="frow"><label>Mitarbeiterzahl</label><input id="c-mitarb" value="'+esc(c.mitarbeiter_anzahl||'')+'" placeholder="z.B. 190"></div>'+
+      '<div class="frow"><label>Gegruendet (Jahr)</label><input id="c-gruend" value="'+esc(c.gruendungsjahr||'')+'" placeholder="z.B. 1960"></div></div>'+
+      '<div class="frow"><label>Karriereseite-URL</label><input id="c-karriere" value="'+esc(c.karriere_url||'')+'" placeholder="https://\u2026/karriere"></div>'+
+      '<div class="frow"><label>Unternehmensbilder <span class="muted" style="font-weight:500">(eine Bild-URL pro Zeile)</span></label><textarea id="c-bilder" placeholder="https://\u2026/bild1.jpg&#10;https://\u2026/bild2.jpg">'+esc(ubilder)+'</textarea></div>'+
+      '<div class="frow2"><div class="frow"><label>Instagram</label><input id="c-insta" value="'+esc(soc.instagram||'')+'" placeholder="https://instagram.com/\u2026"></div>'+
+      '<div class="frow"><label>LinkedIn</label><input id="c-linkedin" value="'+esc(soc.linkedin||'')+'" placeholder="https://linkedin.com/\u2026"></div></div>',
     footer:
       (id?'<button class="btn danger sm" onclick="deleteCustomer(\''+id+'\')">Loeschen</button>':'')+
       '<div class="spacer"></div>'+
@@ -747,10 +792,18 @@ async function saveCustomer(id){
   const name=$('#c-name').value.trim();
   if(!name){toast('Name fehlt');return;}
   const branchen=[...document.querySelectorAll('.selchip.on')].map(e=>e.dataset.br);
+  const ubilder=$('#c-bilder').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const social={};
+  const insta=$('#c-insta').value.trim(); if(insta) social.instagram=insta;
+  const linkedin=$('#c-linkedin').value.trim(); if(linkedin) social.linkedin=linkedin;
   const payload={name,ort:$('#c-ort').value.trim(),telefon:$('#c-tel').value.trim(),email:$('#c-email').value.trim(),
     ansprechpartner:$('#c-ap').value.trim(),website:$('#c-web').value.trim(),strasse:$('#c-str').value.trim(),
     plz:$('#c-plz').value.trim(),primary_color:$('#c-color').value.trim()||null,
-    notizen:$('#c-notiz').value.trim(),branchen,theme:$('#c-theme').value||'galabau'};
+    notizen:$('#c-notiz').value.trim(),branchen,theme:$('#c-theme').value||'galabau',
+    logo_url:$('#c-logo').value.trim()||null,titelbild:$('#c-titel').value.trim()||null,
+    ueber_uns:$('#c-ueber').value.trim()||null,mitarbeiter_anzahl:$('#c-mitarb').value.trim()||null,
+    gruendungsjahr:$('#c-gruend').value.trim()||null,karriere_url:$('#c-karriere').value.trim()||null,
+    unternehmensbilder:ubilder,social};
   let res, newId=id;
   if(id) res=await sb.from('customers').update(payload).eq('id',id);
   else { const ins=await sb.from('customers').insert(payload).select('id').single(); res=ins; newId=ins.data?.id; }
@@ -787,31 +840,177 @@ function viewStellen(){
       : empty('\u25A6','Keine Stellenanzeigen','Lege die erste Stelle an.'))+
     '</div>';
 }
+const BEN_CATALOG=['Uebertarifliche Bezahlung','Unbefristeter Vertrag','30 Tage Urlaub','Weihnachtsgeld','Urlaubsgeld',
+  'Betriebliche Altersvorsorge','Firmenwagen','Firmenhandy','Vermoegenswirksame Leistungen','Job-Bike',
+  'Arbeitskleidung gestellt','Moderne Maschinen & Geraete','Weiterbildung & Schulungen','Aufstiegsmoeglichkeiten',
+  'Familiaeres Team','Geregelte Arbeitszeiten','Wohnortnahe Baustellen','Praemien & Bonuszahlungen',
+  'Mitarbeiterevents','Verpflegungszuschuss','Gesundheitsangebote','Einarbeitung & Mentoring',
+  'Kostenlose Getraenke','Puenktliche Lohnzahlung'];
+let WIZ={step:0,id:null,last:4};
+
 function editStelle(id,preCust){
-  const s=id? stelleById(id):{titel:'',customer_id:preCust||state.customers[0]?.id||'',branche:'',ort:'',beschreibung:'',status:'aktiv'};
   if(!state.customers.length){toast('Erst einen Kunden anlegen');setView('kunden');return;}
-  const custOpts=state.customers.map(c=>'<option value="'+c.id+'"'+(c.id===s.customer_id?' selected':'')+'>'+esc(c.name)+'</option>').join('');
-  const statusOpts=['aktiv','pausiert','geschlossen'].map(o=>'<option'+(o===s.status?' selected':'')+'>'+o+'</option>').join('');
+  const s=id? stelleById(id):{titel:'',customer_id:preCust||state.customers[0]?.id||'',branche:'',ort:'',beschreibung:'',status:'aktiv',
+    beschaeftigungsart:'Vollzeit',vertragsart:'Unbefristet',gehalt:'',eintritt:'ab sofort',aufgaben:'',profil:'',
+    benefits:'',benefits_list:[],stellen_bilder:[],ansprechpartner:'',ansprechpartner_rolle:'',ansprechpartner_foto:'',
+    kontakt_email:'',kontakt_telefon:''};
+  const c=cust(s.customer_id);
+  WIZ={step:0,id:id||null,last:4,visited:{0:true}};
+  // Benefits: gespeicherte Liste, getrennt in Katalog-Treffer + eigene
+  const benList=Array.isArray(s.benefits_list)? s.benefits_list.slice() : (s.benefits? String(s.benefits).split(/\r?\n/).map(x=>x.trim()).filter(Boolean):[]);
+  const benSet=new Set(benList);
+  const benCustom=benList.filter(b=>!BEN_CATALOG.includes(b));
+  const sbilder=Array.isArray(s.stellen_bilder)? s.stellen_bilder.join('\n') : (s.stellen_bilder||'');
+
+  const custOpts=state.customers.map(x=>'<option value="'+x.id+'"'+(x.id===s.customer_id?' selected':'')+'>'+esc(x.name)+'</option>').join('');
+  const statusOpts=[['aktiv','Veroeffentlicht (live im Portal)'],['pausiert','Pausiert (nicht sichtbar)'],['geschlossen','Geschlossen']]
+    .map(o=>'<option value="'+o[0]+'"'+(o[0]===s.status?' selected':'')+'>'+o[1]+'</option>').join('');
+  const artOpts=['Vollzeit','Teilzeit','Vollzeit/Teilzeit','Minijob','Ausbildung','Werkstudent']
+    .map(o=>'<option'+(o===s.beschaeftigungsart?' selected':'')+'>'+o+'</option>').join('');
+  const vtOpts=['Unbefristet','Befristet','Saisonal','Auf Abruf']
+    .map(o=>'<option'+(o===s.vertragsart?' selected':'')+'>'+o+'</option>').join('');
+  const benGrid=BEN_CATALOG.map(b=>'<div class="bopt'+(benSet.has(b)?' on':'')+'" onclick="this.classList.toggle(\'on\')"><span class="bx">\u2713</span><span>'+esc(b)+'</span></div>').join('');
+
+  const pill=(n,l)=>'<div class="wstep" id="wstep-'+n+'" onclick="wizGo('+n+')"><span class="wn">'+(n+1)+'</span><span class="wl">'+l+'</span></div>';
+
   openModal({
-    title:id?'Stelle bearbeiten':'Neue Stelle',
+    title:id?'Stelle bearbeiten':'Neue Stelle anlegen', wide:true,
     body:
-      '<div class="frow"><label>Titel *</label><input id="s-titel" value="'+esc(s.titel)+'"></div>'+
-      '<div class="frow"><label>Kunde *</label><select id="s-cust">'+custOpts+'</select></div>'+
-      '<div class="frow2"><div class="frow"><label>Branche</label><input id="s-branche" value="'+esc(s.branche||'')+'"></div>'+
-      '<div class="frow"><label>Ort</label><input id="s-ort" value="'+esc(s.ort||'')+'"></div></div>'+
-      '<div class="frow"><label>Status</label><select id="s-status">'+statusOpts+'</select></div>'+
-      '<div class="frow"><label>Beschreibung</label><textarea id="s-besch">'+esc(s.beschreibung||'')+'</textarea></div>',
+      '<div class="wsteps">'+pill(0,'Eckdaten')+pill(1,'Jobbeschreibung')+pill(2,'Benefits')+pill(3,'Ansprechpartner')+pill(4,'Veroeffentlichen')+'</div>'+
+      '<div class="werr" id="wizErr"></div>'+
+
+      /* ---- Step 0: Eckdaten ---- */
+      '<div class="wpane on" data-step="0">'+
+        '<div class="frow"><label>Kunde <span class="req">*</span></label><select id="s-cust" onchange="wizCustChange()">'+custOpts+'</select>'+
+          '<div class="hint">Firmenprofil (Logo, \u201eUeber uns\u201c, Bilder) wird beim Kunden gepflegt.</div></div>'+
+        '<div class="frow"><label>Stellentitel <span class="req">*</span></label><input id="s-titel" value="'+esc(s.titel)+'" placeholder="z.B. Tiefbaufacharbeiter (m/w/d)"></div>'+
+        '<div class="frow2"><div class="frow"><label>Rubrik / Branche</label><input id="s-branche" value="'+esc(s.branche||'')+'" placeholder="z.B. Tiefbau, Strassenbau"></div>'+
+        '<div class="frow"><label>Arbeitsort</label><input id="s-ort" value="'+esc(s.ort||'')+'" placeholder="leer = Firmensitz"></div></div>'+
+        '<div class="frow2"><div class="frow"><label>Beschaeftigungsart</label><select id="s-art">'+artOpts+'</select></div>'+
+        '<div class="frow"><label>Vertragsart</label><select id="s-vt">'+vtOpts+'</select></div></div>'+
+        '<div class="frow2"><div class="frow"><label>Eintritt</label><input id="s-eintritt" value="'+esc(s.eintritt||'')+'" placeholder="ab sofort"></div>'+
+        '<div class="frow"><label>Gehalt (Freitext)</label><input id="s-gehalt" value="'+esc(s.gehalt||'')+'" placeholder="z.B. 3.200 - 3.800 EUR / Monat"></div></div>'+
+      '</div>'+
+
+      /* ---- Step 1: Jobbeschreibung ---- */
+      '<div class="wpane" data-step="1">'+
+        '<div class="frow"><label>Kurzbeschreibung <span class="req">*</span></label><textarea id="s-besch" placeholder="Worum geht es bei der Stelle? Das liest der Bewerber zuerst.">'+esc(s.beschreibung||'')+'</textarea></div>'+
+        '<div class="frow"><label>Deine Aufgaben</label><textarea id="s-aufgaben" placeholder="Eine Aufgabe pro Zeile \u2013 wird als Liste mit Haken angezeigt">'+esc(s.aufgaben||'')+'</textarea><div class="hint">Eine Aufgabe pro Zeile.</div></div>'+
+        '<div class="frow"><label>Dein Profil / Anforderungen</label><textarea id="s-profil" placeholder="Eine Anforderung pro Zeile">'+esc(s.profil||'')+'</textarea><div class="hint">Eine Anforderung pro Zeile.</div></div>'+
+        '<div class="frow"><label>Stellen-Bilder</label><textarea id="s-bilder" placeholder="Eine Bild-URL pro Zeile (Baustelle, Team, Maschinen \u2026)">'+esc(sbilder)+'</textarea><div class="hint">Eine Bild-URL pro Zeile (optional).</div></div>'+
+      '</div>'+
+
+      /* ---- Step 2: Benefits ---- */
+      '<div class="wpane" data-step="2">'+
+        '<div class="sec-title" style="margin-top:0">Was bietet ihr? <span class="muted" style="text-transform:none;font-weight:500">(anklicken zum Auswaehlen)</span></div>'+
+        '<div class="bgrid" id="benGrid">'+benGrid+'</div>'+
+        '<div class="frow" style="margin-top:14px"><label>Weitere Benefits</label><textarea id="s-bencustom" placeholder="Eigene Benefits \u2013 eine pro Zeile">'+esc(benCustom.join('\n'))+'</textarea></div>'+
+      '</div>'+
+
+      /* ---- Step 3: Ansprechpartner ---- */
+      '<div class="wpane" data-step="3">'+
+        '<div class="hint" style="margin-bottom:14px">Vorausgefuellt aus dem Kundenprofil \u2013 hier pro Stelle anpassbar.</div>'+
+        '<div class="frow2"><div class="frow"><label>Name</label><input id="s-ap" value="'+esc(s.ansprechpartner||c?.ansprechpartner||'')+'" placeholder="Vor- und Nachname"></div>'+
+        '<div class="frow"><label>Rolle / Position</label><input id="s-aprolle" value="'+esc(s.ansprechpartner_rolle||'')+'" placeholder="z.B. Personalleiterin"></div></div>'+
+        '<div class="frow"><label>Foto-URL</label><input id="s-apfoto" value="'+esc(s.ansprechpartner_foto||'')+'" placeholder="https://\u2026/foto.jpg"></div>'+
+        '<div class="frow2"><div class="frow"><label>Kontakt E-Mail</label><input id="s-kmail" value="'+esc(s.kontakt_email||c?.email||'')+'" placeholder="bewerbung@firma.de"></div>'+
+        '<div class="frow"><label>Kontakt Telefon</label><input id="s-ktel" value="'+esc(s.kontakt_telefon||c?.telefon||'')+'" placeholder="0151 \u2026"></div></div>'+
+      '</div>'+
+
+      /* ---- Step 4: Veroeffentlichen ---- */
+      '<div class="wpane" data-step="4">'+
+        '<div class="sec-title" style="margin-top:0">Status</div>'+
+        '<div class="frow"><select id="s-status">'+statusOpts+'</select><div class="hint">\u201eVeroeffentlicht\u201c = sofort live auf strassen-tiefbau.green-careers.de</div></div>'+
+        '<div class="divider"></div><div class="sec-title">Pruefung</div>'+
+        '<div class="summ" id="wizSumm"></div>'+
+        (id&&s.slug?'<div class="portal-link"><b>Portal-Link:</b><br>strassen-tiefbau.green-careers.de/?job='+esc(s.slug)+'</div>':'')+
+      '</div>',
     footer:(id?'<button class="btn danger sm" onclick="deleteStelle(\''+id+'\')">Loeschen</button>':'')+
-      '<div class="spacer"></div><button class="btn ghost" onclick="closeModal()">Abbrechen</button>'+
-      '<button class="btn" onclick="saveStelle('+(id?"'"+id+"'":'null')+')">Speichern</button>'
+      '<div class="spacer"></div>'+
+      '<button class="btn ghost" id="wiz-back" onclick="wizGo(WIZ.step-1)" style="display:none">Zurueck</button>'+
+      '<button class="btn" id="wiz-next" onclick="wizNext()">Weiter \u2192</button>'+
+      '<button class="btn" id="wiz-save" onclick="saveStelle('+(id?"'"+id+"'":'null')+')" style="display:none">'+(id?'Speichern':'Stelle anlegen')+'</button>'
   });
+  wizGo(0);
+}
+function wizCustChange(){
+  const c=cust($('#s-cust').value); if(!c) return;
+  if(!$('#s-ap').value) $('#s-ap').value=c.ansprechpartner||'';
+  if(!$('#s-kmail').value) $('#s-kmail').value=c.email||'';
+  if(!$('#s-ktel').value) $('#s-ktel').value=c.telefon||'';
+}
+function wizGo(n){
+  n=Math.max(0,Math.min(WIZ.last,n)); WIZ.step=n; WIZ.visited[n]=true;
+  document.querySelectorAll('.wpane').forEach(p=>p.classList.toggle('on',+p.dataset.step===n));
+  document.querySelectorAll('.wstep').forEach((p,i)=>{p.classList.toggle('on',i===n);p.classList.toggle('done',i!==n&&WIZ.visited[i]&&wizStepDone(i));});
+  $('#wiz-back').style.display = n===0?'none':'';
+  $('#wiz-next').style.display = n===WIZ.last?'none':'';
+  $('#wiz-save').style.display = n===WIZ.last?'':'none';
+  $('#wizErr').classList.remove('on');
+  if(n===WIZ.last) wizRenderSumm();
+  const mb=document.querySelector('.modal-b'); if(mb) mb.scrollTop=0;
+}
+function wizStepDone(i){
+  if(i===0) return !!($('#s-titel')&&$('#s-titel').value.trim());
+  if(i===1) return !!($('#s-besch')&&$('#s-besch').value.trim());
+  return true; // 2,3,4 optional
+}
+function wizErr(msg){const e=$('#wizErr');e.innerHTML=msg;e.classList.add('on');const mb=document.querySelector('.modal-b');if(mb)mb.scrollTop=0;}
+function wizNext(){
+  if(WIZ.step===0 && !$('#s-titel').value.trim()){return wizErr('Bitte gib einen <b>Stellentitel</b> ein \u2013 z.B. \u201eTiefbaufacharbeiter (m/w/d)\u201c.');}
+  if(WIZ.step===1 && !$('#s-besch').value.trim()){return wizErr('Bitte beschreibe die Stelle kurz unter <b>Kurzbeschreibung</b> \u2013 das sieht der Bewerber zuerst.');}
+  wizGo(WIZ.step+1);
+}
+function wizCollectBenefits(){
+  const sel=[...document.querySelectorAll('#benGrid .bopt.on span:last-child')].map(s=>s.textContent.trim());
+  const custom=$('#s-bencustom').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  return [...sel,...custom];
+}
+function wizRenderSumm(){
+  const row=(ok,label,hint)=>'<div class="srow"><span class="si '+(ok?'ok':'miss')+'">'+(ok?'\u2713':'!')+'</span><span>'+label+(ok?'':' <span class="muted">\u2013 '+hint+'</span>')+'</span></div>';
+  const benN=wizCollectBenefits().length;
+  const bilderN=$('#s-bilder').value.split(/\r?\n/).filter(x=>x.trim()).length;
+  $('#wizSumm').innerHTML=
+    row(!!$('#s-titel').value.trim(),'Stellentitel','Pflicht (Schritt 1)')+
+    row(!!$('#s-besch').value.trim(),'Kurzbeschreibung','Pflicht (Schritt 2)')+
+    row(!!$('#s-aufgaben').value.trim(),'Aufgaben','empfohlen (Schritt 2)')+
+    row(!!$('#s-profil').value.trim(),'Anforderungen','empfohlen (Schritt 2)')+
+    row(benN>0,benN+' Benefits ausgewaehlt','empfohlen (Schritt 3)')+
+    row(!!$('#s-ap').value.trim(),'Ansprechpartner','empfohlen (Schritt 4)')+
+    row(bilderN>0,bilderN+' Stellen-Bilder','optional');
+}
+function slugify(t){
+  return (t||'stelle').toLowerCase()
+    .replace(/[\u00e4]/g,'ae').replace(/[\u00f6]/g,'oe').replace(/[\u00fc]/g,'ue').replace(/[\u00df]/g,'ss')
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,48)
+    +'-'+Math.random().toString(36).slice(2,8);
 }
 async function saveStelle(id){
-  const titel=$('#s-titel').value.trim(); if(!titel){toast('Titel fehlt');return;}
+  const titel=$('#s-titel').value.trim();
+  if(!titel){wizGo(0);return wizErr('Bitte gib einen <b>Stellentitel</b> ein (Schritt 1).');}
+  if(!$('#s-besch').value.trim()){wizGo(1);return wizErr('Bitte fuelle die <b>Kurzbeschreibung</b> aus (Schritt 2).');}
+  const status=$('#s-status').value;
+  const benefitsList=wizCollectBenefits();
+  const stellenBilder=$('#s-bilder').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
   const payload={titel,customer_id:$('#s-cust').value,branche:$('#s-branche').value.trim(),
-    ort:$('#s-ort').value.trim(),status:$('#s-status').value,beschreibung:$('#s-besch').value.trim()};
-  let res= id? await sb.from('stellenanzeigen').update(payload).eq('id',id) : await sb.from('stellenanzeigen').insert(payload);
-  if(res.error){toast('Fehler: '+res.error.message);return;}
+    ort:$('#s-ort').value.trim(),status,beschreibung:$('#s-besch').value.trim(),
+    beschaeftigungsart:$('#s-art').value,vertragsart:$('#s-vt').value,
+    gehalt:$('#s-gehalt').value.trim(),eintritt:$('#s-eintritt').value.trim(),
+    aufgaben:$('#s-aufgaben').value.trim(),profil:$('#s-profil').value.trim(),
+    benefits:benefitsList.join('\n'),benefits_list:benefitsList,stellen_bilder:stellenBilder,
+    ansprechpartner:$('#s-ap').value.trim(),ansprechpartner_rolle:$('#s-aprolle').value.trim(),
+    ansprechpartner_foto:$('#s-apfoto').value.trim(),
+    kontakt_email:$('#s-kmail').value.trim(),kontakt_telefon:$('#s-ktel').value.trim()};
+  if(status==='aktiv') payload.published_at=new Date().toISOString();
+  const btn=$('#wiz-save'); if(btn){btn.disabled=true;btn.textContent='Speichern \u2026';}
+  let res;
+  if(id){
+    res=await sb.from('stellenanzeigen').update(payload).eq('id',id);
+  }else{
+    payload.slug=slugify(titel);
+    res=await sb.from('stellenanzeigen').insert(payload);
+  }
+  if(res.error){if(btn){btn.disabled=false;btn.textContent=id?'Speichern':'Stelle anlegen';}return wizErr('Fehler beim Speichern: '+esc(res.error.message));}
   await reload('stellen'); closeModal(); render(); toast(id?'Stelle gespeichert':'Stelle angelegt');
 }
 async function deleteStelle(id){
