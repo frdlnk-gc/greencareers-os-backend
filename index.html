@@ -181,6 +181,29 @@ tbody tr:hover{background:var(--soft)}
 .thumb.wide{width:150px}
 .thumb .thx{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:6px;border:none;background:rgba(15,25,20,.72);color:#fff;font-size:14px;line-height:1;cursor:pointer;display:grid;place-items:center}
 .thumb .thx:hover{background:var(--danger)}
+
+/* ---------- BILD-ZUSCHNEIDER (Cropper) ---------- */
+.crop-bg{position:fixed;inset:0;background:rgba(11,26,18,.62);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:24px;z-index:80}
+.crop-card{background:#fff;border-radius:18px;width:100%;max-width:540px;box-shadow:0 30px 80px rgba(0,0,0,.35);overflow:hidden;animation:pop .15s ease}
+.crop-h{padding:18px 22px 14px;border-bottom:1px solid var(--line)}
+.crop-h h3{font-size:17px;font-weight:800;letter-spacing:-.2px}
+.crop-h p{font-size:12.5px;color:var(--muted);margin-top:4px;line-height:1.45}
+.crop-body{padding:18px 22px;display:flex;flex-direction:column;align-items:center;gap:15px}
+.crop-stage{position:relative;border-radius:12px;overflow:hidden;background:#0e1512;touch-action:none;cursor:grab;user-select:none}
+.crop-stage.dragging{cursor:grabbing}
+.crop-stage.nodrag{cursor:default}
+.crop-stage canvas{display:block}
+.crop-ovl{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 2px rgba(255,255,255,.9)}
+.crop-ovl::before,.crop-ovl::after{content:"";position:absolute;background:rgba(255,255,255,.28)}
+.crop-ovl::before{left:33.33%;right:33.33%;top:0;bottom:0;border-left:1px solid rgba(255,255,255,.28);border-right:1px solid rgba(255,255,255,.28);background:none}
+.crop-ovl::after{top:33.33%;bottom:33.33%;left:0;right:0;border-top:1px solid rgba(255,255,255,.28);border-bottom:1px solid rgba(255,255,255,.28);background:none}
+.crop-stage.round .crop-ovl{border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.9),inset 0 0 0 999px rgba(14,21,18,.5)}
+.crop-stage.round .crop-ovl::before,.crop-stage.round .crop-ovl::after{display:none}
+.crop-zoom{display:flex;align-items:center;gap:11px;width:100%}
+.crop-zoom .zi{font-size:15px;color:var(--muted);width:16px;text-align:center;flex:none}
+.crop-zoom input[type=range]{flex:1;accent-color:var(--green);height:4px}
+.crop-foot{display:flex;gap:10px;align-items:center;padding:14px 22px;border-top:1px solid var(--line);background:var(--line-2)}
+.crop-dim{font-size:11.5px;color:var(--muted);font-weight:600;margin-right:auto}
 @media(max-width:860px){.bgrid{grid-template-columns:1fr}}
 @media(max-width:720px){.wsteps{grid-template-columns:repeat(2,1fr)}}
 
@@ -338,6 +361,7 @@ tbody tr:hover{background:var(--soft)}
 </div>
 
 <div id="modalRoot"></div>
+<div id="cropRoot"></div>
 <div id="toastRoot"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -954,6 +978,139 @@ function thumbHTML(url, removeCall, wide){
 function upBtn(label, onchangeCall, multi){
   return '<label class="upbtn">\u2191 '+esc(label)+'<input type="file" accept="image/*"'+(multi?' multiple':'')+' onchange="'+onchangeCall+'"></label>';
 }
+
+/* ===================== BILD-ZUSCHNEIDER (in-browser, WYSIWYG) ===================== */
+/* Idiotensicher: Kunde lädt ein Bild in beliebigem Format hoch und zieht/zoomt den
+   Ausschnitt selbst zurecht. Was im Rahmen zu sehen ist, wird exakt so gespeichert –
+   immer im richtigen Pixelformat. Logos werden komplett gezeigt (nie abgeschnitten). */
+const CROP_PRESETS = {
+  // crop = Rahmen wird gefüllt (cover), Ausschnitt wählbar
+  titel: {mode:'crop', W:1600, H:600,  bg:'#0e1512', fmt:'image/jpeg', q:.9,
+          title:'Titelbild zuschneiden', hint:'Zieh den Ausschnitt zurecht und zoome mit dem Regler. Format 1600 × 600 px (8:3) \u2013 Motiv mittig halten.'},
+  cover: {mode:'crop', W:1280, H:720,  bg:'#0e1512', fmt:'image/jpeg', q:.9,
+          title:'Bild zuschneiden', hint:'Zieh den Ausschnitt zurecht und zoome mit dem Regler. Format 1280 × 720 px (16:9).'},
+  foto:  {mode:'crop', W:600,  H:600,  bg:'#0e1512', fmt:'image/jpeg', q:.9, round:true,
+          title:'Foto zuschneiden', hint:'Gesicht mittig setzen \u2013 wird rund angezeigt. Format 600 × 600 px.'},
+  // fit = ganzes Bild bleibt sichtbar (contain), nur Rand/Größe einstellbar
+  logo:  {mode:'fit',  W:512,  H:512,  bg:'#ffffff', fmt:'image/png',  q:1,
+          title:'Logo anpassen', hint:'Dein komplettes Logo bleibt immer sichtbar. Mit dem Regler den Rand (Weißraum) einstellen. Format 512 × 512 px.'},
+};
+function openCropper(file, presetKey){
+  return new Promise((resolve, reject)=>{
+    const P = CROP_PRESETS[presetKey] || CROP_PRESETS.cover;
+    if(!/^image\//.test(file.type)){ toast('Bitte eine Bilddatei wählen'); return reject('type'); }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = ()=> buildCropper(file, img, url, P, resolve, reject);
+    img.onerror = ()=>{ URL.revokeObjectURL(url); toast('Bild konnte nicht geladen werden'); reject('load'); };
+    img.src = url;
+  });
+}
+function buildCropper(file, img, url, P, resolve, reject){
+  const dpr = Math.min(window.devicePixelRatio||1, 2);
+  const aspect = P.W/P.H;
+  let dispW = 460, dispH = dispW/aspect;
+  const maxH = 360;
+  if(dispH > maxH){ dispH = maxH; dispW = dispH*aspect; }
+  dispW = Math.round(dispW); dispH = Math.round(dispH);
+  const root = $('#cropRoot');
+  root.innerHTML =
+    '<div class="crop-bg"><div class="crop-card">'+
+      '<div class="crop-h"><h3>'+esc(P.title)+'</h3><p>'+esc(P.hint)+'</p></div>'+
+      '<div class="crop-body">'+
+        '<div class="crop-stage'+(P.round?' round':'')+(P.mode==='fit'?' nodrag':'')+'" id="cropStage" style="width:'+dispW+'px;height:'+dispH+'px">'+
+          '<canvas id="cropCanvas"></canvas><div class="crop-ovl"></div>'+
+        '</div>'+
+        '<div class="crop-zoom"><span class="zi">\u2212</span><input type="range" id="cropZoom" min="0" max="100" value="0"><span class="zi">+</span></div>'+
+      '</div>'+
+      '<div class="crop-foot"><span class="crop-dim">Export: '+P.W+' \u00d7 '+P.H+' px</span>'+
+        '<button class="btn ghost" id="cropCancel">Abbrechen</button>'+
+        '<button class="btn" id="cropSave">Übernehmen</button></div>'+
+    '</div></div>';
+
+  const stage = $('#cropStage'), canvas = $('#cropCanvas'), ctx = canvas.getContext('2d');
+  canvas.width = Math.round(dispW*dpr); canvas.height = Math.round(dispH*dpr);
+  canvas.style.width = dispW+'px'; canvas.style.height = dispH+'px';
+  const iw = img.naturalWidth, ih = img.naturalHeight;
+  const base = P.mode==='crop' ? Math.max(dispW/iw, dispH/ih) : Math.min(dispW/iw, dispH/ih);
+  // Zoombereich: crop = 1..3 (kann nicht unter Vollabdeckung), fit = 0.5..1 (nie über Vollbild = nie abgeschnitten)
+  const zMin = P.mode==='crop' ? 1 : 0.5, zMax = P.mode==='crop' ? 3 : 1;
+  let zoom = P.mode==='crop' ? 1 : 1, pan = {x:0,y:0};
+
+  function clampPan(){
+    if(P.mode!=='crop'){ pan.x=0; pan.y=0; return; }
+    const dw = iw*base*zoom, dh = ih*base*zoom;
+    const mx = Math.max(0,(dw-dispW)/2), my = Math.max(0,(dh-dispH)/2);
+    pan.x = Math.max(-mx, Math.min(mx, pan.x));
+    pan.y = Math.max(-my, Math.min(my, pan.y));
+  }
+  function draw(){
+    clampPan();
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,dispW,dispH);
+    ctx.fillStyle = P.bg; ctx.fillRect(0,0,dispW,dispH);
+    const dw = iw*base*zoom, dh = ih*base*zoom;
+    const dx = (dispW-dw)/2 + pan.x, dy = (dispH-dh)/2 + pan.y;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, dx, dy, dw, dh);
+  }
+  function setZoomFromSlider(v){ zoom = zMin + (zMax-zMin)*(v/100); draw(); }
+  const zEl = $('#cropZoom');
+  zEl.value = ((zoom-zMin)/(zMax-zMin))*100;
+  zEl.addEventListener('input', ()=> setZoomFromSlider(+zEl.value));
+
+  // Pan per Maus/Touch (nur crop-Modus)
+  let drag=null;
+  if(P.mode==='crop'){
+    stage.addEventListener('pointerdown', e=>{ drag={x:e.clientX,y:e.clientY,px:pan.x,py:pan.y}; stage.classList.add('dragging'); stage.setPointerCapture(e.pointerId); });
+    stage.addEventListener('pointermove', e=>{ if(!drag) return; pan.x=drag.px+(e.clientX-drag.x); pan.y=drag.py+(e.clientY-drag.y); draw(); });
+    const end=()=>{ drag=null; stage.classList.remove('dragging'); };
+    stage.addEventListener('pointerup', end); stage.addEventListener('pointercancel', end);
+    stage.addEventListener('wheel', e=>{ e.preventDefault(); const step=e.deltaY<0?2:-2; zEl.value=Math.max(0,Math.min(100,+zEl.value+step)); setZoomFromSlider(+zEl.value); }, {passive:false});
+  }
+
+  function cleanup(){ URL.revokeObjectURL(url); root.innerHTML=''; }
+  $('#cropCancel').addEventListener('click', ()=>{ cleanup(); reject('cancel'); });
+  $('#cropSave').addEventListener('click', ()=>{
+    const out = document.createElement('canvas'); out.width=P.W; out.height=P.H;
+    const o = out.getContext('2d'); o.imageSmoothingQuality='high';
+    o.fillStyle = P.bg; o.fillRect(0,0,P.W,P.H);
+    const k = P.W/dispW;                    // Display -> Export (gleiches Seitenverhältnis)
+    const dw = iw*base*zoom, dh = ih*base*zoom;
+    const dx = (dispW-dw)/2 + pan.x, dy = (dispH-dh)/2 + pan.y;
+    o.drawImage(img, dx*k, dy*k, dw*k, dh*k);
+    out.toBlob(b=>{
+      if(!b){ toast('Zuschnitt fehlgeschlagen'); return; }
+      const ext = P.fmt==='image/png' ? 'png' : 'jpg';
+      const nm = (file.name.replace(/\.[^.]+$/,'') || 'bild').replace(/[^\w-]+/g,'-').slice(0,40);
+      cleanup();
+      resolve(new File([b], nm+'.'+ext, {type:P.fmt}));
+    }, P.fmt, P.q);
+  });
+  draw();
+}
+/* Upload mit vorgeschaltetem Zuschnitt – einzeln */
+async function pickCropSingle(input, obj, key, folder, rerenderFn, presetKey){
+  const f = input.files && input.files[0]; if(!f) return;
+  const btn = input.closest('.upbtn'); input.value='';
+  let file; try{ file = await openCropper(f, presetKey); }catch(e){ return; }
+  if(btn) btn.classList.add('busy');
+  try{ obj[key] = await uploadMedia(file, folder); rerenderFn(); }
+  catch(e){ toast('Upload fehlgeschlagen: '+(e.message||e)); }
+  finally{ if(btn) btn.classList.remove('busy'); }
+}
+/* Upload mit vorgeschaltetem Zuschnitt – mehrere (nacheinander) */
+async function pickCropMulti(input, arr, folder, rerenderFn, presetKey){
+  const files = [...(input.files||[])]; if(!files.length) return;
+  const btn = input.closest('.upbtn'); input.value='';
+  for(const raw of files){
+    let file; try{ file = await openCropper(raw, presetKey); }catch(e){ continue; } // Abbrechen = dieses Bild überspringen
+    if(btn) btn.classList.add('busy');
+    try{ arr.push(await uploadMedia(file, folder)); rerenderFn(); }
+    catch(e){ toast('Upload fehlgeschlagen: '+(e.message||e)); }
+    finally{ if(btn) btn.classList.remove('busy'); }
+  }
+}
 // --- Kunden-Bilder (CUP) ---
 function cupFolder(){ return 'kunden/'+(CUP._id||'_new'); }
 function renderCupLogo(){ const el=$('#cup-logo'); if(el) el.innerHTML=CUP.logo_url?thumbHTML(CUP.logo_url,"cupDel('logo_url')"):''; }
@@ -1015,8 +1172,8 @@ function editCustomer(id){
       '<div class="frow"><label>Interne Notizen</label><textarea id="c-notiz">'+esc(c.notizen||'')+'</textarea></div>'+
       '<div class="divider"></div><div class="sec-title">Firmenprofil fürs Stellenportal <span class="muted" style="text-transform:none;font-weight:500">(erscheint im Tab \u201eÜber uns\u201c auf der Stellenseite)</span></div>'+
       '<div class="frow2">'+
-        '<div class="frow"><label>Logo</label><div class="uprow">'+upBtn('Logo hochladen','pickSingle(this,CUP,\'logo_url\',cupFolder(),renderCupLogo)')+'<span class="uphint">Quadratisch, transparentes PNG \u00b7 min. 400\u00d7400 px \u00b7 erscheint als eckiges Logo-Icon (44\u201374 px) im Profil</span></div><div class="thumbs" id="cup-logo"></div></div>'+
-        '<div class="frow"><label>Titelbild (Banner)</label><div class="uprow">'+upBtn('Banner hochladen','pickSingle(this,CUP,\'titelbild\',cupFolder(),renderCupTitel)')+'<span class="uphint">Querformat 1600\u00d7600 px (8:3) \u00b7 Banner ganz oben im Profil, wird auf volle Breite zugeschnitten \u2013 Motiv mittig halten</span></div><div class="thumbs" id="cup-titel"></div></div>'+
+        '<div class="frow"><label>Logo</label><div class="uprow">'+upBtn('Logo hochladen','pickCropSingle(this,CUP,\'logo_url\',cupFolder(),renderCupLogo,\'logo\')')+'<span class="uphint">Beliebiges Bild \u2013 im n\u00e4chsten Schritt richtest du es aus. Ganzes Logo bleibt sichtbar, wird nie abgeschnitten.</span></div><div class="thumbs" id="cup-logo"></div></div>'+
+        '<div class="frow"><label>Titelbild (Banner)</label><div class="uprow">'+upBtn('Banner hochladen','pickCropSingle(this,CUP,\'titelbild\',cupFolder(),renderCupTitel,\'titel\')')+'<span class="uphint">Beliebiges Bild \u2013 du ziehst den Ausschnitt selbst zurecht (Format 1600\u00d7600 px, 8:3). Banner ganz oben im Profil.</span></div><div class="thumbs" id="cup-titel"></div></div>'+
       '</div>'+
       '<div class="frow"><label>Über uns (Beschreibung der Firma)</label><textarea id="c-ueber" placeholder="Wer seid ihr? Was macht euch als Arbeitgeber aus?">'+esc(c.ueber_uns||'')+'</textarea></div>'+
       '<div class="frow2"><div class="frow"><label>Mitarbeiterzahl</label><input id="c-mitarb" value="'+esc(c.mitarbeiter_anzahl||'')+'" placeholder="z.B. 190"></div>'+
@@ -1161,7 +1318,7 @@ function editStelle(id,preCust){
         '<div class="frow"><label>Kurzbeschreibung <span class="req">*</span></label><textarea id="s-besch" placeholder="Worum geht es bei der Stelle? Das liest der Bewerber zuerst.">'+esc(s.beschreibung||'')+'</textarea></div>'+
         chipBlock('aufgaben','Deine Aufgaben','z.B. Verlegen von Kanalrohren','Eine Aufgabe eintippen und mit Enter oder \u201eHinzufügen\u201c bestätigen \u2013 erscheint mit grünem Haken.')+
         chipBlock('profil','Dein Profil / Anforderungen','z.B. Führerschein Klasse B','Eine Anforderung eintippen und bestätigen.')+
-        '<div class="frow"><label>Stellen-Bilder</label><div class="uprow">'+upBtn('Bilder hochladen','pickMulti(this,WMP.stellen_bilder,wmpFolder(),renderWmpImgs)',true)+'<span class="uphint">Querformat, min. 1200\u00d7800 px \u00b7 1. Bild = Vorschau in der Stellen\u00fcbersicht, alle laufen im Karussell der Anzeige (volle Breite, 16:9) \u00b7 (optional)</span></div><div class="thumbs" id="wmp-imgs"></div></div>'+
+        '<div class="frow"><label>Stellen-Bilder</label><div class="uprow">'+upBtn('Bilder hochladen','pickCropMulti(this,WMP.stellen_bilder,wmpFolder(),renderWmpImgs,\'cover\')',true)+'<span class="uphint">Beliebige Bilder \u2013 jedes wird kurz auf 16:9 zugeschnitten (1280\u00d7720 px). 1. Bild = Vorschau in der Stellen\u00fcbersicht, alle laufen im Karussell \u00b7 (optional)</span></div><div class="thumbs" id="wmp-imgs"></div></div>'+
       '</div>'+
 
       /* ---- Step 2: Benefits ---- */
@@ -1179,7 +1336,7 @@ function editStelle(id,preCust){
         '<div class="hint" style="margin-bottom:14px">Vorausgefüllt aus dem Kundenprofil \u2013 hier pro Stelle anpassbar.</div>'+
         '<div class="frow2"><div class="frow"><label>Name</label><input id="s-ap" value="'+esc(s.ansprechpartner||c?.ansprechpartner||'')+'" placeholder="Vor- und Nachname"></div>'+
         '<div class="frow"><label>Rolle / Position</label><input id="s-aprolle" value="'+esc(s.ansprechpartner_rolle||'')+'" placeholder="z.B. Personalleiterin"></div></div>'+
-        '<div class="frow"><label>Foto Ansprechpartner</label><div class="uprow">'+upBtn('Foto hochladen','pickSingle(this,WMP,\'ansprechpartner_foto\',wmpFolder(),renderWmpFoto)')+'<span class="uphint">Quadratisch, Gesicht mittig \u00b7 min. 400\u00d7400 px \u00b7 wird rund angezeigt (54 px) \u00b7 (optional)</span></div><div class="thumbs" id="wmp-foto"></div></div>'+
+        '<div class="frow"><label>Foto Ansprechpartner</label><div class="uprow">'+upBtn('Foto hochladen','pickCropSingle(this,WMP,\'ansprechpartner_foto\',wmpFolder(),renderWmpFoto,\'foto\')')+'<span class="uphint">Beliebiges Bild \u2013 Gesicht mittig setzen, wird rund angezeigt (600\u00d7600 px) \u00b7 (optional)</span></div><div class="thumbs" id="wmp-foto"></div></div>'+
         '<div class="frow2"><div class="frow"><label>Kontakt E-Mail</label><input id="s-kmail" value="'+esc(s.kontakt_email||c?.email||'')+'" placeholder="bewerbung@firma.de"></div>'+
         '<div class="frow"><label>Kontakt Telefon</label><input id="s-ktel" value="'+esc(s.kontakt_telefon||c?.telefon||'')+'" placeholder="0151 \u2026"></div></div>'+
       '</div>'+
