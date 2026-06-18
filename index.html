@@ -830,7 +830,7 @@ function viewKundeDetail(){
     // STELLEN & BEWERBER SUMMARY
     '<div class="grid2">'+
       '<div class="card"><div class="cardh"><b>Stellenanzeigen</b><span class="tag-s gray" style="margin-left:4px">'+ns.length+'</span><button class="btn sm" onclick="editStelle(null,\''+c.id+'\')">+ Stelle</button></div>'+
-        (ns.length? ns.map(s=>{const st=s.status==='aktiv'?'green':s.status==='pausiert'?'gold':'gray';return '<div class="listrow" style="cursor:pointer" onclick="editStelle(\''+s.id+'\')"><div class="lt"><b>'+esc(s.titel)+'</b><small>'+esc(s.ort||'')+' \u00B7 '+bewCountForStelle(s.id)+' Bewerber</small></div><span class="tag-s '+st+'">'+esc(s.status)+'</span></div>';}).join('') : '<div class="cardp muted" style="font-size:13.5px">Keine Stellen.</div>')+
+        (ns.length? ns.map(s=>{const st=stelleSt(s.status);return '<div class="listrow" style="cursor:pointer" onclick="editStelle(\''+s.id+'\')"><div class="lt"><b>'+esc(s.titel)+'</b><small>'+esc(s.ort||'')+' \u00B7 '+bewCountForStelle(s.id)+' Bewerber</small></div><span class="tag-s '+st.c+'">'+esc(st.l)+'</span></div>';}).join('') : '<div class="cardp muted" style="font-size:13.5px">Keine Stellen.</div>')+
       '</div>'+
       '<div class="card"><div class="cardh"><b>Bewerber</b><span class="tag-s gray" style="margin-left:4px">'+nb.length+'</span></div>'+
         (nb.length? nb.slice(0,10).map(b=>{const st=statusOf(b.status);return '<div class="listrow" style="cursor:pointer" onclick="editBewerber(\''+b.id+'\')"><div class="lt"><b>'+esc(b.name)+'</b><small>'+esc(b.email||b.telefon||'')+'</small></div><span class="tag-s '+st.c+'">'+esc(st.label)+'</span></div>';}).join('') : '<div class="cardp muted" style="font-size:13.5px">Keine Bewerber.</div>')+
@@ -1227,25 +1227,46 @@ async function deleteCustomer(id){
 }
 
 /* ===================== STELLENANZEIGEN ===================== */
+const STELLE_ST={
+  aktiv:          {c:'green', l:'Live'},
+  wartet_freigabe:{c:'gold',  l:'Wartet auf Freigabe'},
+  freigegeben:    {c:'blue',  l:'Freigegeben'},
+  pausiert:       {c:'gray',  l:'Entwurf'},
+  geschlossen:    {c:'gray',  l:'Geschlossen'},
+};
+function stelleSt(s){ return STELLE_ST[s]||{c:'gray',l:s||'\u2014'}; }
 function viewStellen(){
   $('#pgActions').innerHTML='<button class="btn" onclick="editStelle()">+ Neue Stelle</button>';
   const q=state.search.toLowerCase();
   const rows=state.stellen.filter(s=>!q||s.titel.toLowerCase().includes(q)||(cust(s.customer_id)?.name||'').toLowerCase().includes(q));
+  const pend=rows.filter(s=>s.status==='wartet_freigabe').length;
   $('#content').innerHTML=
     toolbar('Stelle oder Kunde suchen...')+
+    (pend? '<div class="card" style="margin-bottom:14px;display:flex;align-items:center;gap:10px;padding:12px 16px;background:#FBF3D8;border-color:#F4D9A0"><b style="color:#A16207">'+pend+' Stelle'+(pend>1?'n':'')+' wartet auf Freigabe</b><span class="muted" style="font-size:13px">– nach Zahlungseingang freischalten, dann kann der Kunde live schalten.</span></div>':'')+
     '<div class="card tablecard">'+
-    (rows.length? '<table><thead><tr><th>Titel</th><th>Kunde</th><th class="hide-sm">Ort</th><th class="right">Bewerber</th><th>Status</th></tr></thead><tbody>'+
+    (rows.length? '<table><thead><tr><th>Titel</th><th>Kunde</th><th class="hide-sm">Ort</th><th class="right">Bewerber</th><th>Status</th><th></th></tr></thead><tbody>'+
       rows.map(s=>{
         const nb=bewCountForStelle(s.id);
-        const st=s.status==='aktiv'?'green':s.status==='pausiert'?'gold':'gray';
+        const st=stelleSt(s.status);
+        const act=s.status==='wartet_freigabe'
+          ? '<button class="btn sm" style="background:var(--green-2);color:#fff;border-color:var(--green-2)" onclick="event.stopPropagation();freigebenStelle(\''+s.id+'\')">Freischalten</button>'
+          : '';
         return '<tr onclick="editStelle(\''+s.id+'\')"><td><b>'+esc(s.titel)+'</b><div class="muted" style="font-size:12px">'+esc(s.branche||'')+'</div></td>'+
           '<td>'+esc(cust(s.customer_id)?.name||'\u2014')+'</td>'+
           '<td class="hide-sm muted">'+esc(s.ort||'')+'</td>'+
           '<td class="right">'+nb+'</td>'+
-          '<td><span class="tag-s '+st+'">'+esc(s.status)+'</span></td></tr>';
+          '<td><span class="tag-s '+st.c+'">'+esc(st.l)+'</span></td>'+
+          '<td class="right">'+act+'</td></tr>';
       }).join('')+'</tbody></table>'
       : empty('\u25A6','Keine Stellenanzeigen','Lege die erste Stelle an.'))+
     '</div>';
+}
+async function freigebenStelle(id){
+  const s=stelleById(id); if(!s) return;
+  if(!confirm('Stelle \u201E'+s.titel+'\u201C freischalten?\n\nDer Kunde kann sie danach selbst live schalten. Nur freischalten, wenn die Zahlung eingegangen ist.')) return;
+  const res=await sb.from('stellenanzeigen').update({status:'freigegeben'}).eq('id',id);
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  await loadAll(); render(); toast('Stelle freigegeben – Kunde kann jetzt live schalten.');
 }
 const BEN_CATALOG=['Anhängerführerschein (Kostenübernahme)','Arbeitskleidung gestellt','Aufstiegsmöglichkeiten',
   'Betriebliche Altersvorsorge','Betriebsausflüge','Einarbeitung & Mentoring','Fahrtkostenzuschuss','Familiäres Team',
@@ -1279,7 +1300,7 @@ function editStelle(id,preCust){
   WIZ.aufgaben=toLines(s.aufgaben); WIZ.profil=toLines(s.profil); WIZ.benCustom=benCustom.slice();
 
   const custOpts=state.customers.map(x=>'<option value="'+x.id+'"'+(x.id===s.customer_id?' selected':'')+'>'+esc(x.name)+'</option>').join('');
-  const statusOpts=[['aktiv','Veröffentlicht (live im Portal)'],['pausiert','Pausiert (nicht sichtbar)'],['geschlossen','Geschlossen']]
+  const statusOpts=[['aktiv','Live (im Portal sichtbar)'],['wartet_freigabe','Wartet auf Freigabe'],['freigegeben','Freigegeben (Kunde kann live schalten)'],['pausiert','Entwurf (nicht sichtbar)'],['geschlossen','Geschlossen']]
     .map(o=>'<option value="'+o[0]+'"'+(o[0]===s.status?' selected':'')+'>'+o[1]+'</option>').join('');
   const artOpts=['Vollzeit','Teilzeit','Vollzeit/Teilzeit','Minijob','Ausbildung','Werkstudent']
     .map(o=>'<option'+(o===s.beschaeftigungsart?' selected':'')+'>'+o+'</option>').join('');
