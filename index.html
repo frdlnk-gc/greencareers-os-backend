@@ -1544,9 +1544,10 @@ function tableBewerber(rows, showCust, clickable){
     }).join('')+'</tbody></table>';
 }
 let NEWASG=[];  // Pending-Zuordnungen fuer noch nicht gespeicherten Bewerber
+let ASG_BULK=false, ASG_BULK_SEL=new Set();  // Bulk-Modus: 1 Bewerber -> viele Betriebe per Klick
 function editBewerber(id){
   const b=id? state.bewerber.find(x=>x.id===id):{name:'',email:'',telefon:'',quelle:'manuell',status:'neu',customer_id:'',stellenanzeige_id:'',notizen:''};
-  NEWASG=[];
+  NEWASG=[]; ASG_BULK=false; ASG_BULK_SEL.clear();
   const quelleOpts=QUELLE.map(o=>'<option'+(o===b.quelle?' selected':'')+'>'+o+'</option>').join('');
   const statusOpts=STATUS.map(o=>'<option value="'+o.id+'"'+(o.id===b.status?' selected':'')+'>'+o.label+'</option>').join('');
   openModal({
@@ -1593,12 +1594,71 @@ function asgBoxHtml(id){
     '</div>';
   }).join('') : '<div class="muted" style="font-size:13px;margin-bottom:8px">Noch keinem Betrieb zugeordnet.</div>';
   const avail=state.customers.filter(c=>!taken.includes(c.id));
+  const idArg=id?"'"+id+"'":'null';
+  if(ASG_BULK && avail.length) return list+asgBulkHtml(id,avail);
   const addRow = avail.length ? '<div style="display:flex;gap:8px;align-items:center;margin-top:6px">'+
       '<select id="asg-add-c" style="flex:0 0 44%;min-width:0;padding:7px 9px;border:1px solid var(--line);border-radius:8px" onchange="asgAddStelleSync()"><option value="">Betrieb w\u00e4hlen\u2026</option>'+avail.map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join('')+'</select>'+
       '<select id="asg-add-s" style="flex:1;min-width:0;padding:7px 9px;border:1px solid var(--line);border-radius:8px"><option value="">\u2014 Stelle (optional)</option></select>'+
-      '<button type="button" class="btn sm" onclick="asgAdd('+(id?"'"+id+"'":'null')+')">+ Zuordnen</button>'+
-    '</div>' : (rows.length?'<div class="muted" style="font-size:12.5px;margin-top:4px">Allen Betrieben zugeordnet.</div>':'');
+      '<button type="button" class="btn sm" onclick="asgAdd('+idArg+')">+ Zuordnen</button>'+
+    '</div>'+
+    (avail.length>1?'<div style="margin-top:7px"><button type="button" class="btn ghost sm" onclick="asgBulkToggle('+idArg+')">\u2630 Mehrere auf einmal zuordnen ('+avail.length+')</button></div>':'')
+    : (rows.length?'<div class="muted" style="font-size:12.5px;margin-top:4px">Allen Betrieben zugeordnet.</div>':'');
   return list+addRow;
+}
+/* ---- Bulk-Zuordnung: einen Bewerber mit EINEM Klick vielen Betrieben zuordnen ---- */
+function asgBulkHtml(id,avail){
+  const idArg=id?"'"+id+"'":'null';
+  const rows=avail.map(c=>
+    '<label class="asg-bulk-row" data-name="'+esc((c.name||'').toLowerCase())+'" style="display:flex;gap:8px;align-items:center;font-size:13.5px;padding:4px 5px;border-radius:6px;cursor:pointer">'+
+      '<input type="checkbox" value="'+c.id+'"'+(ASG_BULK_SEL.has(c.id)?' checked':'')+' onchange="asgBulkPick(\''+c.id+'\',this.checked)"> '+esc(c.name||'?')+
+    '</label>').join('');
+  return '<div class="asg-bulk" style="margin-top:9px;border:1px solid var(--line);border-radius:10px;padding:11px;background:rgba(0,0,0,.015)">'+
+    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'+
+      '<input id="asg-bulk-q" placeholder="Betriebe filtern\u2026" oninput="asgBulkFilter()" style="flex:1;min-width:0;padding:7px 9px;border:1px solid var(--line);border-radius:8px">'+
+      '<label style="font-size:12.5px;display:flex;gap:5px;align-items:center;white-space:nowrap;cursor:pointer"><input type="checkbox" id="asg-bulk-all" onchange="asgBulkAll(this.checked)"> Alle</label>'+
+    '</div>'+
+    '<div id="asg-bulk-list" style="max-height:210px;overflow:auto;display:flex;flex-direction:column;gap:2px">'+rows+'</div>'+
+    '<div style="display:flex;gap:8px;align-items:center;margin-top:10px">'+
+      '<button type="button" class="btn ghost sm" onclick="asgBulkCancel('+idArg+')">Abbrechen</button>'+
+      '<div style="flex:1"></div>'+
+      '<span class="muted" id="asg-bulk-count" style="font-size:12.5px">'+(ASG_BULK_SEL.size?ASG_BULK_SEL.size+' ausgew\u00e4hlt':'')+'</span>'+
+      '<button type="button" class="btn sm" id="asg-bulk-go"'+(ASG_BULK_SEL.size?'':' disabled')+' onclick="asgBulkApply('+idArg+')">Zuordnen</button>'+
+    '</div>'+
+  '</div>';
+}
+function asgBulkToggle(id){ ASG_BULK=true; ASG_BULK_SEL.clear(); refreshAsg(id); }
+function asgBulkCancel(id){ ASG_BULK=false; ASG_BULK_SEL.clear(); refreshAsg(id); }
+function asgBulkPick(cid,on){ if(on)ASG_BULK_SEL.add(cid); else ASG_BULK_SEL.delete(cid); asgBulkCount(); }
+function asgBulkFilter(){
+  const q=($('#asg-bulk-q').value||'').toLowerCase();
+  document.querySelectorAll('#asg-bulk-list .asg-bulk-row').forEach(r=>{
+    r.style.display=r.getAttribute('data-name').includes(q)?'':'none';
+  });
+}
+function asgBulkAll(on){
+  document.querySelectorAll('#asg-bulk-list .asg-bulk-row').forEach(r=>{
+    if(r.style.display==='none')return;            // nur sichtbare (gefilterte) Zeilen
+    const cb=r.querySelector('input'); cb.checked=on;
+    if(on)ASG_BULK_SEL.add(cb.value); else ASG_BULK_SEL.delete(cb.value);
+  });
+  asgBulkCount();
+}
+function asgBulkCount(){
+  const el=$('#asg-bulk-count'); if(el)el.textContent=ASG_BULK_SEL.size?ASG_BULK_SEL.size+' ausgew\u00e4hlt':'';
+  const go=$('#asg-bulk-go'); if(go)go.disabled=!ASG_BULK_SEL.size;
+}
+async function asgBulkApply(id){
+  const ids=[...ASG_BULK_SEL]; if(!ids.length){toast('Keine Betriebe ausgew\u00e4hlt');return;}
+  if(!id){
+    ids.forEach(cid=>{ if(!NEWASG.some(a=>a.customer_id===cid)) NEWASG.push({customer_id:cid,stellenanzeige_id:null}); });
+    ASG_BULK=false; ASG_BULK_SEL.clear(); refreshAsg(null); toast(ids.length+' Betriebe zugeordnet'); return;
+  }
+  if(!state.zuordLoaded){toast('Bitte zuerst SQL v8 ausf\u00fchren (Join-Tabelle fehlt)');return;}
+  const rows=ids.map(cid=>({bewerber_id:id,customer_id:cid,stellenanzeige_id:null,status:'gesichtet'}));
+  const res=await sb.from('bewerber_zuordnung').insert(rows);
+  if(res.error){toast('Fehler: '+res.error.message);return;}
+  ASG_BULK=false; ASG_BULK_SEL.clear();
+  await reload('zuordnungen'); refreshAsg(id); render(); toast(ids.length+' Betriebe zugeordnet');
 }
 function asgAddStelleSync(){
   const cid=$('#asg-add-c').value;
