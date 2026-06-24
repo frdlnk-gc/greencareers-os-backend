@@ -222,6 +222,10 @@ tbody tr:hover{background:var(--soft)}
 .extragrid{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13.5px}
 .extra-k{color:var(--muted);font-weight:600}
 .extra-v{color:var(--text);word-break:break-word}
+.mmrow{display:flex;gap:10px;align-items:flex-start;padding:9px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.mmrow:hover{background:rgba(0,0,0,.02)}
+.mmrow input[type=checkbox]{margin-top:3px;width:16px;height:16px;flex:none;cursor:pointer}
+@media(max-width:820px){.mm-grid{grid-template-columns:1fr!important}}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink-2);color:#fff;padding:12px 18px;border-radius:11px;font-weight:600;font-size:14px;box-shadow:0 12px 30px rgba(0,0,0,.3);z-index:80;animation:pop .15s ease}
 
 @media(max-width:860px){
@@ -1917,53 +1921,134 @@ async function csvImport(){
   await reload('bewerber'); closeModal(); render(); toast(done+' Bewerber importiert');
 }
 
-/* ===================== MATCHING ===================== */
+/* ===================== MATCHING (Schnell-Matrix: viele Bewerber × viele Betriebe) ===================== */
+/* Bewerber-Felder liegen uneinheitlich in extra (CSV: PLZ/Ort/Position, Website: stelle). */
+function bewExtra(b){ return (b&&b.extra&&typeof b.extra==='object')?b.extra:{}; }
+function pickKey(o,keys){ for(const k of keys){ if(o[k]!=null&&String(o[k]).trim()!=='') return String(o[k]).trim(); } return ''; }
+function bewPlz(b){ return pickKey(bewExtra(b),['PLZ','plz','Postleitzahl','postleitzahl']); }
+function bewOrt(b){ return pickKey(bewExtra(b),['Ort','ort','Wohnort','wohnort','Stadt','stadt','Standort','standort']); }
+function bewWunsch(b){ return pickKey(bewExtra(b),['Position','position','Stelle','stelle','Wunschstelle','wunschstelle','Beruf','beruf','Qualifikation','qualifikation','Fachrichtung','fachrichtung']); }
+
+/* Grobe Umkreis-Schätzung ohne GPS: Mittelpunkt je 2-stelliger PLZ-Leitregion (ca.). */
+const MM_PLZ2={'01':[51.05,13.74],'02':[51.18,14.43],'03':[51.76,14.33],'04':[51.34,12.37],'06':[51.48,11.97],'07':[50.88,11.59],'08':[50.72,12.50],'09':[50.83,12.92],'10':[52.52,13.40],'12':[52.45,13.45],'13':[52.56,13.35],'14':[52.40,13.06],'15':[52.34,14.55],'16':[52.83,13.82],'17':[53.56,13.26],'18':[54.09,12.13],'19':[53.63,11.41],'20':[53.55,9.99],'21':[53.25,10.41],'22':[53.59,9.90],'23':[53.87,10.69],'24':[54.32,10.13],'25':[54.06,9.42],'26':[53.14,8.21],'27':[53.55,8.58],'28':[53.08,8.81],'29':[52.92,10.08],'30':[52.37,9.73],'31':[52.15,9.95],'32':[52.12,8.67],'33':[51.95,8.63],'34':[51.31,9.50],'35':[50.80,8.77],'36':[50.55,9.68],'37':[51.53,9.94],'38':[52.27,10.52],'39':[52.13,11.63],'40':[51.23,6.78],'41':[51.19,6.44],'42':[51.26,7.18],'44':[51.51,7.47],'45':[51.46,7.01],'46':[51.50,6.85],'47':[51.43,6.76],'48':[51.96,7.63],'49':[52.28,8.05],'50':[50.94,6.96],'51':[51.03,7.00],'52':[50.78,6.08],'53':[50.73,7.10],'54':[49.75,6.64],'55':[50.00,8.27],'56':[50.36,7.59],'57':[50.88,8.02],'58':[51.36,7.47],'59':[51.68,7.82],'60':[50.11,8.68],'61':[50.23,8.62],'63':[50.10,8.77],'64':[49.87,8.65],'65':[50.08,8.24],'66':[49.24,6.99],'67':[49.44,7.77],'68':[49.49,8.47],'69':[49.40,8.69],'70':[48.78,9.18],'71':[48.69,9.02],'72':[48.52,9.06],'73':[48.70,9.65],'74':[49.14,9.22],'75':[48.89,8.70],'76':[49.01,8.40],'77':[48.47,7.94],'78':[48.06,8.46],'79':[47.99,7.84],'80':[48.14,11.58],'81':[48.11,11.60],'82':[47.99,11.34],'83':[47.86,12.12],'84':[48.54,12.15],'85':[48.40,11.43],'86':[48.37,10.90],'87':[47.73,10.31],'88':[47.65,9.48],'89':[48.40,9.99],'90':[49.45,11.08],'91':[49.30,10.99],'92':[49.45,12.18],'93':[49.01,12.10],'94':[48.57,13.46],'95':[50.03,11.58],'96':[49.89,10.90],'97':[49.79,9.95],'98':[50.61,10.69],'99':[50.98,11.03]};
+function plzCoord(p){ p=String(p||'').replace(/\D/g,''); return p.length>=2?(MM_PLZ2[p.slice(0,2)]||null):null; }
+function mmDist(a,b){ const A=plzCoord(a),B=plzCoord(b); if(!A||!B)return null; const R=6371,r=x=>x*Math.PI/180; const dLa=r(B[0]-A[0]),dLo=r(B[1]-A[1]); const s=Math.sin(dLa/2)**2+Math.cos(r(A[0]))*Math.cos(r(B[0]))*Math.sin(dLo/2)**2; return Math.round(2*R*Math.asin(Math.sqrt(s))); }
+function custStellen(c){ return state.stellen.filter(s=>s.customer_id===c.id); }
+function custMinDist(c){ let m=null; MM.selB.forEach(bid=>{ const b=state.bewerber.find(x=>x.id===bid); if(!b)return; const d=mmDist(bewPlz(b),c.plz); if(d!=null&&(m==null||d<m))m=d; }); return m; }
+function custMatchesStelle(c,q){ if(!q)return true; q=q.toLowerCase(); if((c.branchen||[]).some(x=>String(x).toLowerCase().includes(q)))return true; return custStellen(c).some(s=>(s.titel||'').toLowerCase().includes(q)||(s.branche||'').toLowerCase().includes(q)); }
+function bewMatches(b,q){ if(!q)return true; q=q.toLowerCase(); return [b.name,b.email,b.telefon,bewPlz(b),bewOrt(b),bewWunsch(b)].some(v=>String(v||'').toLowerCase().includes(q)); }
+
+let MM={selB:new Set(),selC:new Set(),radius:0,qB:'',qC:'',qStelle:'',showAll:false};
+function mmBewData(){ return state.bewerber.filter(b=>MM.showAll?true:!bewIsAssigned(b)).filter(b=>bewMatches(b,MM.qB)); }
+function mmCustData(){
+  let rows=state.customers.filter(c=>{
+    if(MM.qC){ const q=MM.qC.toLowerCase(); if(![c.name,c.plz,c.ort].some(v=>String(v||'').toLowerCase().includes(q)))return false; }
+    return custMatchesStelle(c,MM.qStelle);
+  });
+  if(MM.radius>0&&MM.selB.size>0) return rows.map(c=>({c,d:custMinDist(c)})).filter(x=>x.d!=null&&x.d<=MM.radius).sort((a,b)=>a.d-b.d);
+  return rows.map(c=>({c,d:MM.selB.size?custMinDist(c):null}));
+}
+function mmBewList(){
+  const host=$('#mm-b-list'); if(!host)return;
+  const rows=mmBewData();
+  host.innerHTML=rows.length?rows.map(b=>{
+    const w=bewWunsch(b),plz=bewPlz(b),ort=bewOrt(b),loc=[plz,ort].filter(Boolean).join(' ');
+    return '<label class="mmrow"><input type="checkbox" onchange="mmToggleB(\''+b.id+'\',this.checked)"'+(MM.selB.has(b.id)?' checked':'')+'>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><b>'+esc(b.name)+'</b>'+(w?'<span class="tag-s blue">'+esc(w)+'</span>':'')+(bewIsAssigned(b)?'<span class="tag-s green">zugeordnet</span>':'')+'</div>'+
+        '<div class="muted" style="font-size:12px">'+esc(b.email||'')+(b.telefon?' \u00B7 '+esc(b.telefon):'')+'</div>'+
+        '<div class="muted" style="font-size:12px">'+(loc?'\uD83D\uDCCD '+esc(loc):'<span style="opacity:.6">keine PLZ/Ort</span>')+'</div>'+
+      '</div></label>';
+  }).join(''):'<div class="muted" style="padding:14px">Keine Bewerber.</div>';
+  const cnt=$('#mm-b-count'); if(cnt)cnt.textContent=rows.length;
+}
+function mmCustList(){
+  const host=$('#mm-c-list'); if(!host)return;
+  const rows=mmCustData();
+  const radiusOn=MM.radius>0&&MM.selB.size>0;
+  host.innerHTML=rows.length?rows.map(({c,d})=>{
+    const loc=[c.plz,c.ort].filter(Boolean).join(' ');
+    const st=custStellen(c).slice(0,3).map(s=>esc(s.titel)).filter(Boolean).join(', ');
+    return '<label class="mmrow"><input type="checkbox" onchange="mmToggleC(\''+c.id+'\',this.checked)"'+(MM.selC.has(c.id)?' checked':'')+'>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><b>'+esc(c.name)+'</b>'+(d!=null?'<span class="tag-s '+(d<=60?'green':'gold')+'">~'+d+' km</span>':'')+'</div>'+
+        '<div class="muted" style="font-size:12px">'+(loc?'\uD83D\uDCCD '+esc(loc):'<span style="opacity:.6">keine PLZ/Ort</span>')+'</div>'+
+        (st?'<div class="muted" style="font-size:12px">Sucht: '+st+'</div>':'')+
+      '</div></label>';
+  }).join(''):'<div class="muted" style="padding:14px">Keine Betriebe'+(radiusOn?' im Umkreis':'')+'.</div>';
+  const cnt=$('#mm-c-count'); if(cnt)cnt.textContent=rows.length;
+}
+function mmBar(){
+  const bar=$('#mm-bar'); if(!bar)return;
+  const nb=MM.selB.size,nc=MM.selC.size,tot=nb*nc;
+  bar.innerHTML='<div style="flex:1;font-size:14px"><b>'+nb+'</b> Bewerber \u00D7 <b>'+nc+'</b> Betriebe = <b style="color:var(--green)">'+tot+'</b> Bewerbung'+(tot===1?'':'en')+'</div>'+
+    ((nb||nc)?'<button class="btn ghost sm" onclick="mmClear()">Auswahl leeren</button>':'')+
+    '<button class="btn"'+(tot?'':' disabled')+' onclick="mmApply()">'+(tot||'')+' zuordnen</button>';
+}
+function mmToggleB(id,on){ if(on)MM.selB.add(id);else MM.selB.delete(id); mmBar(); if(MM.radius)mmCustList(); }
+function mmToggleC(id,on){ if(on)MM.selC.add(id);else MM.selC.delete(id); mmBar(); }
+function mmClear(){ MM.selB.clear(); MM.selC.clear(); mmBewList(); mmCustList(); mmBar(); }
+function mmSelAllB(){ const all=mmBewData(); const allSel=all.length&&all.every(b=>MM.selB.has(b.id)); all.forEach(b=>{ if(allSel)MM.selB.delete(b.id); else MM.selB.add(b.id); }); mmBewList(); mmBar(); if(MM.radius)mmCustList(); }
+function mmSelAllC(){ const all=mmCustData(); const allSel=all.length&&all.every(x=>MM.selC.has(x.c.id)); all.forEach(x=>{ if(allSel)MM.selC.delete(x.c.id); else MM.selC.add(x.c.id); }); mmCustList(); mmBar(); }
+function mmSetQB(v){ MM.qB=v; mmBewList(); }
+function mmSetQC(v){ MM.qC=v; mmCustList(); }
+function mmSetQS(v){ MM.qStelle=v; mmCustList(); }
+function mmSetRadius(v){ MM.radius=Number(v)||0; mmCustList(); }
+function mmToggleShowAll(on){ MM.showAll=on; mmBewList(); }
+async function mmApply(){
+  const bs=[...MM.selB],cs=[...MM.selC];
+  if(!bs.length||!cs.length){ toast('Bewerber UND Betriebe w\u00e4hlen'); return; }
+  const rows=[];
+  bs.forEach(bid=>cs.forEach(cid=>{
+    const exists=state.zuordLoaded&&state.zuordnungen.some(z=>z.bewerber_id===bid&&z.customer_id===cid);
+    if(!exists) rows.push({bewerber_id:bid,customer_id:cid,status:'gesichtet'});
+  }));
+  if(!rows.length){ toast('Alle Kombinationen schon zugeordnet'); return; }
+  const res=await sb.from('bewerber_zuordnung').upsert(rows,{onConflict:'bewerber_id,customer_id',ignoreDuplicates:true});
+  if(res.error){ toast('Fehler: '+res.error.message); return; }
+  MM.selB.clear(); MM.selC.clear();
+  await reload('zuordnungen'); await reload('bewerber'); render();
+  toast(rows.length+' Bewerbung'+(rows.length===1?'':'en')+' zugeordnet');
+}
 function viewMatching(){
-  const open=state.bewerber.filter(b=>!bewIsAssigned(b));
+  const radOpts=[['0','Umkreis: aus'],['20','20 km'],['40','40 km'],['60','60 km'],['100','100 km'],['200','200 km']].map(([v,l])=>'<option value="'+v+'"'+(String(MM.radius)===v?' selected':'')+'>'+l+'</option>').join('');
   const custOpts='<option value="all">Alle Kunden</option>'+state.customers.map(c=>'<option value="'+c.id+'"'+(state.filterCustomer===c.id?' selected':'')+'>'+esc(c.name)+'</option>').join('');
   $('#content').innerHTML=
-    '<div class="card" style="padding:16px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'+
-      '<b>'+open.length+' Bewerber</b> ohne Zuordnung. Weise sie hier einem Kunden + Stelle zu.'+
+    '<div class="card" style="padding:14px 18px;margin-bottom:16px">'+
+      '<b>Schnell-Matching:</b> Bewerber links + Betriebe rechts markieren \u2192 alle Kombinationen mit einem Klick als Bewerbungen zuordnen. '+
+      'Betriebe lassen sich per PLZ-Umkreis (ca., grobe Region) um die markierten Bewerber und/oder nach gesuchter Stelle filtern.'+
     '</div>'+
-    '<div class="card tablecard">'+
-    (open.length?
-      '<table><thead><tr><th>Bewerber</th><th class="hide-sm">Quelle</th><th>Kunde</th><th>Stelle</th><th></th></tr></thead><tbody>'+
-      open.map(b=>'<tr style="cursor:default">'+
-        '<td><b>'+esc(b.name)+'</b><div class="muted" style="font-size:12px">'+esc(b.email||'')+'</div></td>'+
-        '<td class="hide-sm"><span class="tag-s gray">'+esc(b.quelle||'')+'</span></td>'+
-        '<td><select id="m-c-'+b.id+'" onchange="mStelle(\''+b.id+'\')" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px"><option value="">wählen...</option>'+
-          state.customers.map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join('')+'</select></td>'+
-        '<td><select id="m-s-'+b.id+'" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px"><option value="">\u2014</option></select></td>'+
-        '<td class="right"><button class="btn sm" onclick="mAssign(\''+b.id+'\')">Zuordnen</button></td></tr>'
-      ).join('')+'</tbody></table>'
-      : empty('\u2705','Alles zugeordnet','Keine offenen Bewerber.'))+
+    '<div class="mm-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">'+
+      '<div class="card" style="padding:0;overflow:hidden">'+
+        '<div style="padding:12px 14px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
+          '<b>Bewerber</b><span class="tag-s gray" id="mm-b-count">0</span><div style="flex:1"></div>'+
+          '<label style="font-size:12px;display:flex;gap:5px;align-items:center;cursor:pointer"><input type="checkbox" onchange="mmToggleShowAll(this.checked)"'+(MM.showAll?' checked':'')+'> auch zugeordnete</label>'+
+          '<button class="btn ghost sm" onclick="mmSelAllB()">Alle</button>'+
+        '</div>'+
+        '<div style="padding:10px 14px;border-bottom:1px solid var(--line)"><input id="mm-qb" placeholder="Bewerber / Ort / PLZ / Stelle suchen\u2026" value="'+esc(MM.qB)+'" oninput="mmSetQB(this.value)" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px"></div>'+
+        '<div id="mm-b-list" style="max-height:60vh;overflow:auto"></div>'+
+      '</div>'+
+      '<div class="card" style="padding:0;overflow:hidden">'+
+        '<div style="padding:12px 14px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
+          '<b>Betriebe</b><span class="tag-s gray" id="mm-c-count">0</span><div style="flex:1"></div>'+
+          '<select onchange="mmSetRadius(this.value)" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:12.5px">'+radOpts+'</select>'+
+          '<button class="btn ghost sm" onclick="mmSelAllC()">Alle</button>'+
+        '</div>'+
+        '<div style="padding:10px 14px;border-bottom:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap">'+
+          '<input id="mm-qc" placeholder="Betrieb / Ort / PLZ\u2026" value="'+esc(MM.qC)+'" oninput="mmSetQC(this.value)" style="flex:1;min-width:120px;padding:8px 10px;border:1px solid var(--line);border-radius:8px">'+
+          '<input id="mm-qs" placeholder="sucht Stelle (z.B. Kanalbauer)\u2026" value="'+esc(MM.qStelle)+'" oninput="mmSetQS(this.value)" style="flex:1;min-width:120px;padding:8px 10px;border:1px solid var(--line);border-radius:8px">'+
+        '</div>'+
+        '<div id="mm-c-list" style="max-height:60vh;overflow:auto"></div>'+
+      '</div>'+
     '</div>'+
+    '<div id="mm-bar" style="position:sticky;bottom:0;margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;display:flex;gap:12px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.10);z-index:5"></div>'+
     '<div style="height:22px"></div>'+
     '<div class="toolbar"><div class="sec-title" style="margin:0">Zugeordnete Bewerber</div><div style="flex:1"></div>'+
       '<select onchange="state.filterCustomer=this.value;render()" style="padding:8px 11px;border:1px solid var(--line);border-radius:9px">'+custOpts+'</select></div>'+
     '<div class="card tablecard">'+
       tableBewerber(state.bewerber.filter(b=>bewIsAssigned(b)&&(state.filterCustomer==='all'||bewCustomerIds(b).includes(state.filterCustomer))),true)+
     '</div>';
-}
-function mStelle(bid){
-  const cid=$('#m-c-'+bid).value;
-  const opts=state.stellen.filter(s=>s.customer_id===cid);
-  $('#m-s-'+bid).innerHTML='<option value="">\u2014 keine Stelle</option>'+opts.map(s=>'<option value="'+s.id+'">'+esc(s.titel)+'</option>').join('');
-}
-async function mAssign(bid){
-  const cid=$('#m-c-'+bid).value; if(!cid){toast('Kunde wählen');return;}
-  const sid=$('#m-s-'+bid).value||null;
-  if(state.zuordLoaded){
-    const res=await sb.from('bewerber_zuordnung').upsert({bewerber_id:bid,customer_id:cid,stellenanzeige_id:sid,status:'gesichtet'},{onConflict:'bewerber_id,customer_id'});
-    if(res.error){toast('Fehler: '+res.error.message);return;}
-    const b=state.bewerber.find(x=>x.id===bid);
-    if(b&&!b.customer_id){await sb.from('bewerber').update({customer_id:cid,stellenanzeige_id:sid,status:'gesichtet'}).eq('id',bid);}
-    await reload('zuordnungen'); await reload('bewerber'); render(); toast('Betrieb zugeordnet');
-  } else {
-    const res=await sb.from('bewerber').update({customer_id:cid,stellenanzeige_id:sid,status:'gesichtet'}).eq('id',bid);
-    if(res.error){toast('Fehler: '+res.error.message);return;}
-    await reload('bewerber'); render(); toast('Bewerber zugeordnet');
-  }
+  mmBewList(); mmCustList(); mmBar();
 }
 
 /* ===================== SUPPORT (global) ===================== */
