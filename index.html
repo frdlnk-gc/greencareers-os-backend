@@ -452,7 +452,12 @@ const $ = s => document.querySelector(s);
 const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cust = id => state.customers.find(c=>c.id===id);
 const stelleById = id => state.stellen.find(s=>s.id===id);
-const statusOf = id => STATUS.find(s=>s.id===id) || {label:id,c:'gray'};
+// OS-Kanban-Stages (Kunden-Backend) haben ein eigenes Status-Vokabular. Wenn ein Betrieb
+// im OS eine Karte verschiebt, landet diese Stage-ID in bewerber_zuordnung.status. Damit das
+// Admin-Backend hier nicht den rohen Code (z.B. "gesprterm") als graues Chip zeigt, mappen wir
+// die OS-Stages auf lesbare Labels.
+const OS_STAGE_LABEL = { inbearb:['In Bearbeitung','gold'], nichterreicht:['Nicht erreicht','gold'], gesprterm:['Gespräch terminiert','blue'], gesprgef:['Gespräch geführt','blue'], probetag:['Probetag','blue'], abgelehnt:['Abgelehnt','red'] };
+const statusOf = id => STATUS.find(s=>s.id===id) || (OS_STAGE_LABEL[id]?{label:OS_STAGE_LABEL[id][0],c:OS_STAGE_LABEL[id][1]}:{label:id,c:'gray'});
 
 /* ---- Bewerber-Zuordnung (Many-to-Many) Helfer ----
    Quelle der Wahrheit = state.zuordnungen (Join-Tabelle bewerber_zuordnung).
